@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+
+  app:
+    build: .
+    container_name: streambox_app
+    ports:
+      - "8080:80"
+    environment:
+      DB_HOST: db
+      DB_NAME: streambox
+      DB_USER: streambox
+      DB_PASSWORD: streambox123
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./uploads:/var/www/html/uploads
+      - ./images:/var/www/html/images
+
+  db:
+    image: mysql:8.0
+    container_name: streambox_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: streambox
+      MYSQL_USER: streambox
+      MYSQL_PASSWORD: streambox123
+      MYSQL_ROOT_PASSWORD: rootpass123
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./install/database.sql:/docker-entrypoint-initdb.d/database.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "streambox", "-pstreambox123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: streambox_phpmyadmin
+    ports:
+      - "8081:80"
+    environment:
+      PMA_HOST: db
+      PMA_USER: streambox
+      PMA_PASSWORD: streambox123
+    depends_on:
+      - db
+
+volumes:
+  db_data:

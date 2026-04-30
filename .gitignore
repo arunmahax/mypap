@@ -1,0 +1,9 @@
+# Ignore sensitive / generated files
+uploads/*
+!uploads/.gitkeep
+images/users/*
+!images/users/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db

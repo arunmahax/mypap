@@ -1,0 +1,18 @@
+Options -Indexes
+RewriteEngine On
+
+# Allow direct access to files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Security: block access to sensitive files
+<FilesMatch "\.(sql|log|env|git|sh)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Security: block .lic license file
+<Files ".lic">
+    Order allow,deny
+    Deny from all
+</Files>
