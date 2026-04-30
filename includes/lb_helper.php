@@ -247,7 +247,7 @@ function call_api(array $data): string {
 
 function get_latest_version(string $item_id): array {
     return [
-        'product_name' => 'Streambox',
+        'product_name' => 'Veoplayer',
         'version'      => '1.0',
         'status'       => true
     ];
