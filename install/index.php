@@ -410,7 +410,7 @@ if(is_writeable($installFile)){
                                                 
                                                         <div class="mb-16">
             												<label for="host" class="form-label">Database Host</label>
-            												<input class="form-control" type="text" id="host" placeholder="enter your database host" name="host" value="localhost" required>
+            												<input class="form-control" type="text" id="host" placeholder="enter your database host" name="host" value="<?php echo getenv('DB_HOST') ?: 'localhost'; ?>" required>
             											</div>
             											<div class="mb-16">
             												<label for="username" class="form-label">Database Username</label>
@@ -528,7 +528,7 @@ if(is_writeable($installFile)){
                                             
                                                     <div class="mb-16">
         												<label for="host" class="form-label">Database Host</label>
-        												<input class="form-control" type="text" id="host" placeholder="enter your database host" name="host" value="localhost" required>
+        												<input class="form-control" type="text" id="host" placeholder="enter your database host" name="host" value="<?php echo getenv('DB_HOST') ?: 'localhost'; ?>" required>
         											</div>
         											<div class="mb-16">
         												<label for="username" class="form-label">Database Username</label>
