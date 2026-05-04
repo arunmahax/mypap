@@ -39,40 +39,51 @@
     // Handle send notification to selected users
     $notify_result = '';
     if (isset($_POST['send_notification'])) {
-        $player_ids = isset($_POST['player_ids']) ? $_POST['player_ids'] : [];
+        $fcm_tokens   = isset($_POST['player_ids']) ? $_POST['player_ids'] : [];
         $notify_title = isset($_POST['notify_title']) ? trim($_POST['notify_title']) : '';
         $notify_msg   = isset($_POST['notify_msg'])   ? trim($_POST['notify_msg'])   : '';
 
-        if (!empty($player_ids) && !empty($notify_title) && !empty($notify_msg)) {
-            // Filter valid player IDs
-            $valid_ids = array_filter($player_ids, function($id) { return !empty(trim($id)); });
-            if (!empty($valid_ids)) {
-                $fields = array(
-                    'app_id'             => ONESIGNAL_APP_ID,
-                    'include_player_ids' => array_values($valid_ids),
-                    'headings'           => array('en' => $notify_title),
-                    'contents'           => array('en' => $notify_msg),
-                );
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, 'https://onesignal.com/api/v1/notifications');
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    'Content-Type: application/json; charset=utf-8',
-                    'Authorization: Basic ' . ONESIGNAL_REST_KEY
-                ));
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($ch, CURLOPT_POST, true);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                $response = curl_exec($ch);
-                curl_close($ch);
-                $resp_arr = json_decode($response, true);
-                if (isset($resp_arr['id'])) {
-                    $notify_result = '<div class="alert alert-success mt-3">Notification sent successfully to ' . count($valid_ids) . ' device(s).</div>';
-                } else {
-                    $notify_result = '<div class="alert alert-danger mt-3">Failed: ' . htmlspecialchars($response) . '</div>';
+        // Load FCM server key from settings
+        $fcm_key_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT fcm_server_key FROM tbl_settings WHERE id=1"));
+        $fcm_server_key = $fcm_key_row ? trim($fcm_key_row['fcm_server_key']) : '';
+
+        if (empty($fcm_server_key)) {
+            $notify_result = '<div class="alert alert-warning mt-3">FCM Server Key not configured. Go to <a href="settings_app.php">App Settings → Notification</a> and add your Firebase Server Key.</div>';
+        } elseif (!empty($fcm_tokens) && !empty($notify_title) && !empty($notify_msg)) {
+            $valid_tokens = array_values(array_filter($fcm_tokens, function($t) { return !empty(trim($t)); }));
+            if (!empty($valid_tokens)) {
+                // FCM supports up to 1000 tokens per request
+                $chunks = array_chunk($valid_tokens, 1000);
+                $sent = 0; $failed = 0;
+                foreach ($chunks as $chunk) {
+                    $fields = json_encode([
+                        'registration_ids' => $chunk,
+                        'notification' => [
+                            'title' => $notify_title,
+                            'body'  => $notify_msg,
+                            'sound' => 'default',
+                        ],
+                        'priority' => 'high',
+                    ]);
+                    $ch = curl_init();
+                    curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                        'Content-Type: application/json',
+                        'Authorization: key=' . $fcm_server_key,
+                    ]);
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($ch, CURLOPT_POST, true);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+                    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                    $response = curl_exec($ch);
+                    curl_close($ch);
+                    $resp_arr = json_decode($response, true);
+                    if (isset($resp_arr['success'])) $sent += (int)$resp_arr['success'];
+                    if (isset($resp_arr['failure'])) $failed += (int)$resp_arr['failure'];
                 }
+                $notify_result = '<div class="alert alert-success mt-3">Notification sent! Delivered: <strong>' . $sent . '</strong>, Failed: <strong>' . $failed . '</strong></div>';
             } else {
-                $notify_result = '<div class="alert alert-warning mt-3">No valid OneSignal Player IDs found for selected users.</div>';
+                $notify_result = '<div class="alert alert-warning mt-3">No valid FCM tokens found for selected users. Ask users to update the app and log in again.</div>';
             }
         } else {
             $notify_result = '<div class="alert alert-warning mt-3">Please select users and fill in the notification title and message.</div>';
