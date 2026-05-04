@@ -128,6 +128,37 @@ else if($get_helper['helper_name']=="get_interstitial") {
     echo $val= str_replace('\\/', '/', json_encode($set,JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
 	die();
 }
-else {
-    $get_helper = get_api_data($_POST['data']);
+else if($get_helper['helper_name']=="register_device") {
+
+    $device_id           = isset($get_helper['device_id'])           ? cleanInput($get_helper['device_id'])           : '';
+    $onesignal_player_id = isset($get_helper['onesignal_player_id']) ? cleanInput($get_helper['onesignal_player_id']) : '';
+    $server_url          = isset($get_helper['server_url'])          ? cleanInput($get_helper['server_url'])          : '';
+    $username            = isset($get_helper['username'])            ? cleanInput($get_helper['username'])            : '';
+    $password            = isset($get_helper['password'])            ? cleanInput($get_helper['password'])            : '';
+    $exp_date            = isset($get_helper['exp_date'])            ? cleanInput($get_helper['exp_date'])            : '';
+    $app_version         = isset($get_helper['app_version'])         ? cleanInput($get_helper['app_version'])         : '';
+
+    if (!empty($device_id)) {
+        $stmt = $mysqli->prepare(
+            "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, last_seen)
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE
+               onesignal_player_id = VALUES(onesignal_player_id),
+               server_url          = VALUES(server_url),
+               username            = VALUES(username),
+               password            = VALUES(password),
+               exp_date            = VALUES(exp_date),
+               app_version         = VALUES(app_version),
+               last_seen           = NOW()"
+        );
+        $stmt->bind_param('sssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version);
+        $stmt->execute();
+        $stmt->close();
+        $set[$API_NAME][] = array('success' => '1', 'MSG' => 'Device registered');
+    } else {
+        $set[$API_NAME][] = array('success' => '-1', 'MSG' => 'Invalid device ID');
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo str_replace('\\/', '/', json_encode($set, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    die();
 }
