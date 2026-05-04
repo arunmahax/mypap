@@ -43,45 +43,87 @@
         $notify_title = isset($_POST['notify_title']) ? trim($_POST['notify_title']) : '';
         $notify_msg   = isset($_POST['notify_msg'])   ? trim($_POST['notify_msg'])   : '';
 
-        // Load FCM server key from settings
+        // Load Firebase service account JSON from settings
         $fcm_key_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT fcm_server_key FROM tbl_settings WHERE id=1"));
-        $fcm_server_key = $fcm_key_row ? trim($fcm_key_row['fcm_server_key']) : '';
+        $fcm_service_account = $fcm_key_row ? trim($fcm_key_row['fcm_server_key']) : '';
 
-        if (empty($fcm_server_key)) {
-            $notify_result = '<div class="alert alert-warning mt-3">FCM Server Key not configured. Go to <a href="settings_app.php">App Settings → Notification</a> and add your Firebase Server Key.</div>';
+        if (empty($fcm_service_account)) {
+            $notify_result = '<div class="alert alert-warning mt-3">Firebase Service Account not configured. Go to <a href="settings_app.php">App Settings → Notification</a> and paste your Service Account JSON.</div>';
         } elseif (!empty($fcm_tokens) && !empty($notify_title) && !empty($notify_msg)) {
             $valid_tokens = array_values(array_filter($fcm_tokens, function($t) { return !empty(trim($t)); }));
             if (!empty($valid_tokens)) {
-                // FCM supports up to 1000 tokens per request
-                $chunks = array_chunk($valid_tokens, 1000);
-                $sent = 0; $failed = 0;
-                foreach ($chunks as $chunk) {
-                    $fields = json_encode([
-                        'registration_ids' => $chunk,
-                        'notification' => [
-                            'title' => $notify_title,
-                            'body'  => $notify_msg,
-                            'sound' => 'default',
-                        ],
-                        'priority' => 'high',
-                    ]);
+                // Parse service account and get OAuth2 access token for FCM V1 API
+                $sa = json_decode($fcm_service_account, true);
+                $project_id = $sa['project_id'] ?? '';
+                $access_token = null;
+
+                if (!empty($sa['client_email']) && !empty($sa['private_key']) && !empty($project_id)) {
+                    $b64 = function($d) { return rtrim(strtr(base64_encode($d), '+/', '-_'), '='); };
+                    $now = time();
+                    $header  = $b64(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
+                    $payload = $b64(json_encode([
+                        'iss'   => $sa['client_email'],
+                        'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+                        'aud'   => 'https://oauth2.googleapis.com/token',
+                        'exp'   => $now + 3600,
+                        'iat'   => $now,
+                    ]));
+                    $sig_input = $header . '.' . $payload;
+                    openssl_sign($sig_input, $signature, $sa['private_key'], 'SHA256');
+                    $jwt = $sig_input . '.' . $b64($signature);
+
                     $ch = curl_init();
-                    curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send');
-                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                        'Content-Type: application/json',
-                        'Authorization: key=' . $fcm_server_key,
-                    ]);
+                    curl_setopt($ch, CURLOPT_URL, 'https://oauth2.googleapis.com/token');
                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                     curl_setopt($ch, CURLOPT_POST, true);
-                    curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+                    curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+                        'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+                        'assertion'  => $jwt,
+                    ]));
                     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    $response = curl_exec($ch);
+                    $token_resp = curl_exec($ch);
                     curl_close($ch);
-                    $resp_arr = json_decode($response, true);
-                    if (isset($resp_arr['success'])) $sent += (int)$resp_arr['success'];
-                    if (isset($resp_arr['failure'])) $failed += (int)$resp_arr['failure'];
+                    $token_data = json_decode($token_resp, true);
+                    $access_token = $token_data['access_token'] ?? null;
                 }
-                $notify_result = '<div class="alert alert-success mt-3">Notification sent! Delivered: <strong>' . $sent . '</strong>, Failed: <strong>' . $failed . '</strong></div>';
+
+                if (!$access_token) {
+                    $notify_result = '<div class="alert alert-danger mt-3">Failed to get FCM access token. Check your Service Account JSON in <a href="settings_app.php">App Settings → Notification</a>.</div>';
+                } else {
+                    $sent = 0; $failed = 0;
+                    $fcm_url = 'https://fcm.googleapis.com/v1/projects/' . $project_id . '/messages:send';
+                    foreach ($valid_tokens as $token) {
+                        $body = json_encode([
+                            'message' => [
+                                'token'        => $token,
+                                'notification' => [
+                                    'title' => $notify_title,
+                                    'body'  => $notify_msg,
+                                ],
+                                'android' => [
+                                    'priority'     => 'high',
+                                    'notification' => ['sound' => 'default'],
+                                ],
+                            ],
+                        ]);
+                        $ch = curl_init();
+                        curl_setopt($ch, CURLOPT_URL, $fcm_url);
+                        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                            'Content-Type: application/json',
+                            'Authorization: Bearer ' . $access_token,
+                        ]);
+                        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                        curl_setopt($ch, CURLOPT_POST, true);
+                        curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
+                        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                        $response = curl_exec($ch);
+                        curl_close($ch);
+                        $resp_arr = json_decode($response, true);
+                        if (isset($resp_arr['name'])) $sent++;
+                        else $failed++;
+                    }
+                    $notify_result = '<div class="alert alert-success mt-3">Notification sent! Delivered: <strong>' . $sent . '</strong>, Failed: <strong>' . $failed . '</strong></div>';
+                }
             } else {
                 $notify_result = '<div class="alert alert-warning mt-3">No valid FCM tokens found for selected users. Ask users to update the app and log in again.</div>';
             }

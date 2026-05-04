@@ -427,10 +427,10 @@
                                         </div>
                                     </div>
                                     <div class="mb-3 row">
-                                        <label for="" class="col-sm-2 col-form-label">FCM Server Key <small class="text-muted">(Firebase → Project Settings → Cloud Messaging → Server key)</small></label>
+                                        <label for="" class="col-sm-2 col-form-label">Firebase Service Account JSON <small class="text-muted">(Firebase → Project Settings → Service Accounts → Generate new private key)</small></label>
                                         <div class="col-sm-10">
-                                            <input type="text" name="fcm_server_key" id="fcm_server_key" value="<?php echo isset($settings_data['fcm_server_key']) ? $settings_data['fcm_server_key'] : ''; ?>" class="form-control" placeholder="AAAA...">
-                                            <small class="text-success">Used to send push notifications directly from the App Users page.</small>
+                                            <textarea name="fcm_server_key" id="fcm_server_key" class="form-control" rows="6" placeholder='{"type":"service_account","project_id":"...","private_key":"-----BEGIN PRIVATE KEY-----\n...","client_email":"..."}'><?php echo isset($settings_data['fcm_server_key']) ? htmlspecialchars($settings_data['fcm_server_key']) : ''; ?></textarea>
+                                            <small class="text-success">Paste the full Service Account JSON. Used to send push notifications via FCM V1 API (Legacy API is deprecated).</small>
                                         </div>
                                     </div>
                                     <button type="submit" name="notification_submit" class="btn btn-primary" style="min-width: 120px;">Save</button>
