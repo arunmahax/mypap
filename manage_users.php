@@ -58,6 +58,10 @@
                 $access_token = null;
 
                 if (!empty($sa['client_email']) && !empty($sa['private_key']) && !empty($project_id)) {
+                    if (!function_exists('openssl_sign')) {
+                        $notify_result = '<div class="alert alert-danger mt-3">PHP openssl extension is not installed on the server.</div>';
+                        goto end_notify;
+                    }
                     $b64 = function($d) { return rtrim(strtr(base64_encode($d), '+/', '-_'), '='); };
                     $now = time();
                     $header  = $b64(json_encode(['alg' => 'RS256', 'typ' => 'JWT']));
@@ -69,7 +73,12 @@
                         'iat'   => $now,
                     ]));
                     $sig_input = $header . '.' . $payload;
-                    openssl_sign($sig_input, $signature, $sa['private_key'], 'SHA256');
+                    $sign_ok = openssl_sign($sig_input, $signature, $sa['private_key'], 'SHA256');
+                    if (!$sign_ok) {
+                        $openssl_err = openssl_error_string();
+                        $notify_result = '<div class="alert alert-danger mt-3">openssl_sign failed: ' . htmlspecialchars($openssl_err) . '</div>';
+                        goto end_notify;
+                    }
                     $jwt = $sig_input . '.' . $b64($signature);
 
                     $ch = curl_init();
@@ -88,7 +97,8 @@
                 }
 
                 if (!$access_token) {
-                    $notify_result = '<div class="alert alert-danger mt-3">Failed to get FCM access token. Check your Service Account JSON in <a href="settings_app.php">App Settings → Notification</a>.</div>';
+                    $token_err = isset($token_data['error']) ? htmlspecialchars($token_data['error'] . ': ' . ($token_data['error_description'] ?? '')) : 'Unknown error';
+                    $notify_result = '<div class="alert alert-danger mt-3">Failed to get FCM access token: ' . $token_err . '</div>';
                 } else {
                     $sent = 0; $failed = 0;
                     $fcm_url = 'https://fcm.googleapis.com/v1/projects/' . $project_id . '/messages:send';
@@ -131,6 +141,7 @@
             $notify_result = '<div class="alert alert-warning mt-3">Please select users and fill in the notification title and message.</div>';
         }
         // Re-fetch after action
+        end_notify:
         $result = mysqli_query($mysqli, $sql_query);
     }
 ?>
