@@ -45,7 +45,7 @@
 
         // Load Firebase service account JSON from settings
         $fcm_key_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT fcm_server_key FROM tbl_settings WHERE id=1"));
-        $fcm_service_account = $fcm_key_row ? trim($fcm_key_row['fcm_server_key']) : '';
+        $fcm_service_account = $fcm_key_row ? fix_service_account_json($fcm_key_row['fcm_server_key']) : '';
 
         if (empty($fcm_service_account)) {
             $notify_result = '<div class="alert alert-warning mt-3">Firebase Service Account not configured. Go to <a href="settings_app.php">App Settings → Notification</a> and paste your Service Account JSON.</div>';

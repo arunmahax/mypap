@@ -77,7 +77,7 @@
         $data = array(
           'onesignal_app_id'   => trim($_POST['onesignal_app_id']),
           'onesignal_rest_key' => trim($_POST['onesignal_rest_key']),
-          'fcm_server_key'     => trim($_POST['fcm_server_key']),
+          'fcm_server_key'     => fix_service_account_json($_POST['fcm_server_key']),
         );
         
         $settings_edit = Update('tbl_settings', $data, "WHERE id = '1'");
