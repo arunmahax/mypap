@@ -91,14 +91,19 @@
                     ]));
                     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
                     $token_resp = curl_exec($ch);
+                    $curl_err   = curl_error($ch);
                     curl_close($ch);
                     $token_data = json_decode($token_resp, true);
                     $access_token = $token_data['access_token'] ?? null;
                 }
 
                 if (!$access_token) {
-                    $token_err = isset($token_data['error']) ? htmlspecialchars($token_data['error'] . ': ' . ($token_data['error_description'] ?? '')) : 'Unknown error';
-                    $notify_result = '<div class="alert alert-danger mt-3">Failed to get FCM access token: ' . $token_err . '</div>';
+                    $token_err = !empty($curl_err) 
+                        ? 'cURL error: ' . htmlspecialchars($curl_err)
+                        : (isset($token_data['error']) 
+                            ? htmlspecialchars($token_data['error'] . ': ' . ($token_data['error_description'] ?? ''))
+                            : 'Raw response: ' . htmlspecialchars(substr($token_resp ?? '', 0, 300)));
+                    $notify_result = '<div class="alert alert-danger mt-3">FCM token error: ' . $token_err . '</div>';
                 } else {
                     $sent = 0; $failed = 0;
                     $fcm_url = 'https://fcm.googleapis.com/v1/projects/' . $project_id . '/messages:send';
