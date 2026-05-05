@@ -10,6 +10,7 @@
     if(isset($_POST['submit'])){
         $notify_title = trim($_POST['notification_title']);
         $notify_msg   = trim($_POST['notification_msg']);
+        $notify_url   = isset($_POST['notification_url']) ? trim($_POST['notification_url']) : '';
 
         // Load service account JSON from settings
         $fcm_key_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT fcm_server_key FROM tbl_settings WHERE id=1"));
@@ -72,15 +73,13 @@
                     foreach ($valid_tokens as $token) {
                         $body = json_encode([
                             'message' => [
-                                'token'        => $token,
-                                'notification' => [
+                                'token'  => $token,
+                                'data'   => [
                                     'title' => $notify_title,
                                     'body'  => $notify_msg,
+                                    'url'   => $notify_url,
                                 ],
-                                'android' => [
-                                    'priority'     => 'high',
-                                    'notification' => ['sound' => 'default'],
-                                ],
+                                'android' => ['priority' => 'high'],
                             ],
                         ]);
                         $ch = curl_init();
@@ -139,12 +138,12 @@
                             </div>
                             
                             <div class="mb-3 row">
-                                <label class="col-sm-2 col-form-label">Select Image</label>
+                                <label class="col-sm-2 col-form-label">Renew URL <small class="text-muted">(optional)</small></label>
                                 <div class="col-sm-10">
-                                    <input class="form-control" type="file"  name="big_picture"  accept=".png, .jpg, .JPG .PNG" onchange="fileValidation()" id="fileupload">
+                                    <input type="url" name="notification_url" class="form-control" placeholder="https://... (leave empty to hide Renew button in popup)">
                                 </div>
                             </div>
-                            
+
                             <div class="mb-3 row">
                                 <label class="col-sm-2 col-form-label">&nbsp;</label>
                                 <div class="col-sm-10">

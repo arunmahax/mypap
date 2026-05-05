@@ -42,6 +42,7 @@
         $fcm_tokens   = isset($_POST['player_ids']) ? $_POST['player_ids'] : [];
         $notify_title = isset($_POST['notify_title']) ? trim($_POST['notify_title']) : '';
         $notify_msg   = isset($_POST['notify_msg'])   ? trim($_POST['notify_msg'])   : '';
+        $notify_url   = isset($_POST['notify_url'])   ? trim($_POST['notify_url'])   : '';
 
         // Load Firebase service account JSON from settings
         $fcm_key_row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT fcm_server_key FROM tbl_settings WHERE id=1"));
@@ -121,15 +122,14 @@
                     foreach ($valid_tokens as $token) {
                         $body = json_encode([
                             'message' => [
-                                'token'        => $token,
-                                'notification' => [
+                                'token'  => $token,
+                                // data-only: ensures onMessageReceived() fires in all app states
+                                'data'   => [
                                     'title' => $notify_title,
                                     'body'  => $notify_msg,
+                                    'url'   => $notify_url,
                                 ],
-                                'android' => [
-                                    'priority'     => 'high',
-                                    'notification' => ['sound' => 'default'],
-                                ],
+                                'android' => ['priority' => 'high'],
                             ],
                         ]);
                         $ch = curl_init();
@@ -268,11 +268,14 @@
                         <div class="card p-3 mt-3" style="background:#f8f9fa;">
                             <h6 class="mb-3"><i class="ri-notification-3-line me-1"></i> Send Push Notification to Selected Users</h6>
                             <div class="row g-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <input type="text" name="notify_title" class="form-control" placeholder="Notification Title" required>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <input type="text" name="notify_msg" class="form-control" placeholder="Notification Message" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="url" name="notify_url" class="form-control" placeholder="Renew URL (optional, e.g. https://...)">
                                 </div>
                                 <div class="col-md-2">
                                     <button type="submit" name="send_notification" class="btn btn-primary w-100">
@@ -280,7 +283,7 @@
                                     </button>
                                 </div>
                             </div>
-                            <small class="text-muted mt-2 d-block">Select users using the checkboxes above. Only users with a OneSignal Player ID will receive the notification.</small>
+                            <small class="text-muted mt-2 d-block">Select users using the checkboxes above. Leave Renew URL empty to hide the Renew button in the popup.</small>
                         </div>
                     </form>
 
