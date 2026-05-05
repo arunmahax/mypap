@@ -54,7 +54,15 @@
             if (!empty($valid_tokens)) {
                 // Parse service account and get OAuth2 access token for FCM V1 API
                 $sa = json_decode($fcm_service_account, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    $notify_result = '<div class="alert alert-danger mt-3">Service Account JSON is invalid: ' . htmlspecialchars(json_last_error_msg()) . '. Please re-paste it in <a href="settings_app.php">App Settings → Notification</a>.</div>';
+                    goto end_notify;
+                }
                 $project_id = $sa['project_id'] ?? '';
+                if (empty($sa['client_email']) || empty($sa['private_key']) || empty($project_id)) {
+                    $notify_result = '<div class="alert alert-danger mt-3">Service Account JSON is missing required fields (project_id/client_email/private_key). Found keys: ' . htmlspecialchars(implode(', ', array_keys($sa ?? []))) . '</div>';
+                    goto end_notify;
+                }
                 $access_token = null;
 
                 if (!empty($sa['client_email']) && !empty($sa['private_key']) && !empty($project_id)) {
