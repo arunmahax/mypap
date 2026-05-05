@@ -75,16 +75,16 @@
     } else if(isset($_POST['notification_submit'])) {
         
         $data = array(
-          'onesignal_app_id'  => trim($_POST['onesignal_app_id']),
+          'onesignal_app_id'   => trim($_POST['onesignal_app_id']),
           'onesignal_rest_key' => trim($_POST['onesignal_rest_key']),
-          'fcm_server_key'    => trim($_POST['fcm_server_key']),
+          'fcm_server_key'     => trim($_POST['fcm_server_key']),
         );
         
         $settings_edit = Update('tbl_settings', $data, "WHERE id = '1'");
         
         $_SESSION['msg'] = "11";
         $_SESSION['class'] = "success";
-        header("Location:settings_app.php");
+        echo "<script>window.location='settings_app.php#nsofts_setting_6';</script>";
         exit;
         
     } else if(isset($_POST['app_update_submit'])){
