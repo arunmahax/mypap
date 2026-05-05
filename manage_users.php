@@ -90,10 +90,13 @@
                         'assertion'  => $jwt,
                     ]));
                     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-                    $token_resp = curl_exec($ch);
-                    $curl_err   = curl_error($ch);
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+                    $token_resp   = curl_exec($ch);
+                    $curl_err     = curl_error($ch);
+                    $curl_http    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                     curl_close($ch);
-                    $token_data = json_decode($token_resp, true);
+                    $token_data   = json_decode($token_resp, true);
                     $access_token = $token_data['access_token'] ?? null;
                 }
 
@@ -102,7 +105,7 @@
                         ? 'cURL error: ' . htmlspecialchars($curl_err)
                         : (isset($token_data['error']) 
                             ? htmlspecialchars($token_data['error'] . ': ' . ($token_data['error_description'] ?? ''))
-                            : 'Raw response: ' . htmlspecialchars(substr($token_resp ?? '', 0, 300)));
+                            : 'HTTP ' . $curl_http . ' | Raw: ' . htmlspecialchars(substr($token_resp ?? '', 0, 500)));
                     $notify_result = '<div class="alert alert-danger mt-3">FCM token error: ' . $token_err . '</div>';
                 } else {
                     $sent = 0; $failed = 0;
