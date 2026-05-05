@@ -15,11 +15,7 @@
  * under the License.
  */
 
-# Insert Data
-function Insert(string $table, array $data){
-    global $mysqli;
-
-// Fix control characters in service account JSON (actual newlines inside string values)
+# Fix control characters in service account JSON (actual newlines inside string values)
 function fix_service_account_json(string $raw): string {
     $raw = trim($raw);
     if (json_decode($raw) !== null) return $raw;
@@ -29,6 +25,11 @@ function fix_service_account_json(string $raw): string {
     }, $raw);
     return $fixed ?? $raw;
 }
+
+# Insert Data
+function Insert(string $table, array $data){
+    global $mysqli;
+
     //print_r($data);
 
     $fields = array_keys($data);
