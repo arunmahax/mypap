@@ -1,0 +1,49 @@
+<?php
+/**
+ * License check endpoint for sideloaded VeoPlayer installs.
+ * Called by the app to verify if a device_id has a valid LemonSqueezy license.
+ *
+ * GET https://panel.veoplayer.com/ls_license_check.php?device_id=XXXXX
+ * Returns JSON: {"licensed": true/false, "plan": "annual"|"lifetime"|""}
+ */
+
+header('Content-Type: application/json');
+
+$device_id = isset($_GET['device_id']) ? trim($_GET['device_id']) : '';
+
+if (empty($device_id)) {
+    echo json_encode(['licensed' => false, 'plan' => '']);
+    exit;
+}
+
+require_once __DIR__ . '/includes/db.php';
+
+// Table may not exist yet (before first webhook)
+mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    device_id  VARCHAR(255) NOT NULL,
+    order_id   VARCHAR(255) DEFAULT '',
+    plan       VARCHAR(20)  DEFAULT 'annual',
+    created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP    NULL,
+    UNIQUE KEY uq_device (device_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+$device_id_esc = mysqli_real_escape_string($mysqli, $device_id);
+$row = mysqli_fetch_assoc(mysqli_query($mysqli,
+    "SELECT plan, expires_at FROM tbl_ls_licenses WHERE device_id='$device_id_esc' LIMIT 1"));
+
+if (!$row) {
+    echo json_encode(['licensed' => false, 'plan' => '']);
+    exit;
+}
+
+$plan    = $row['plan'];
+$expires = $row['expires_at'];
+
+// Lifetime = always valid; Annual = valid while expires_at is in the future
+$licensed = ($plan === 'lifetime')
+    || ($expires === null)
+    || (strtotime($expires) > time());
+
+echo json_encode(['licensed' => $licensed, 'plan' => $plan]);
