@@ -146,19 +146,46 @@ else if($get_helper['helper_name']=="register_device") {
     $app_version         = isset($get_helper['app_version'])         ? cleanInput($get_helper['app_version'])         : '';
 
     if (!empty($device_id)) {
-        $stmt = $mysqli->prepare(
-            "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, last_seen)
-             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
-             ON DUPLICATE KEY UPDATE
-               onesignal_player_id = IF(VALUES(onesignal_player_id) != '', VALUES(onesignal_player_id), onesignal_player_id),
-               server_url          = IF(VALUES(server_url) != '', VALUES(server_url), server_url),
-               username            = IF(VALUES(username) != '', VALUES(username), username),
-               password            = IF(VALUES(password) != '', VALUES(password), password),
-               exp_date            = IF(VALUES(exp_date) != '', VALUES(exp_date), exp_date),
-               app_version         = IF(VALUES(app_version) != '', VALUES(app_version), app_version),
-               last_seen           = NOW()"
-        );
-        $stmt->bind_param('sssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version);
+        // SELECT + INSERT/UPDATE avoids needing a UNIQUE key on device_id
+        // (ON DUPLICATE KEY UPDATE only triggers on a UNIQUE/PRIMARY key)
+        $check = $mysqli->prepare("SELECT id FROM tbl_users WHERE device_id = ? LIMIT 1");
+        $check->bind_param('s', $device_id);
+        $check->execute();
+        $check->store_result();
+        $exists = $check->num_rows > 0;
+        $check->close();
+
+        if ($exists) {
+            // Update existing record — preserve non-empty fields so a pre-login
+            // registration doesn't overwrite real IPTV credentials added later.
+            $stmt = $mysqli->prepare(
+                "UPDATE tbl_users SET
+                   onesignal_player_id = IF(? != '', ?, onesignal_player_id),
+                   server_url          = IF(? != '', ?, server_url),
+                   username            = IF(? != '', ?, username),
+                   password            = IF(? != '', ?, password),
+                   exp_date            = IF(? != '', ?, exp_date),
+                   app_version         = IF(? != '', ?, app_version),
+                   last_seen           = NOW()
+                 WHERE device_id = ?"
+            );
+            $stmt->bind_param('sssssssssssss',
+                $onesignal_player_id, $onesignal_player_id,
+                $server_url,          $server_url,
+                $username,            $username,
+                $password,            $password,
+                $exp_date,            $exp_date,
+                $app_version,         $app_version,
+                $device_id
+            );
+        } else {
+            // New device — insert fresh row
+            $stmt = $mysqli->prepare(
+                "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, last_seen)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, NOW())"
+            );
+            $stmt->bind_param('sssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version);
+        }
         $stmt->execute();
         $stmt->close();
         $set[$API_NAME][] = array('success' => '1', 'MSG' => 'Device registered');
