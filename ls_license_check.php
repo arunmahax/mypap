@@ -11,6 +11,10 @@
 error_reporting(0);
 ini_set('display_errors', '0');
 
+// db_helper.php calls ob_start() and sets Content-Type: text/html.
+// Include it first so we can discard its buffer and override the header.
+require_once __DIR__ . '/includes/db_helper.php';
+ob_end_clean();                          // discard anything buffered by db_helper
 header('Content-Type: application/json');
 
 $device_id = isset($_GET['device_id']) ? trim($_GET['device_id']) : '';
@@ -19,8 +23,6 @@ if (empty($device_id)) {
     echo json_encode(['licensed' => false, 'plan' => '']);
     exit;
 }
-
-require_once __DIR__ . '/includes/db.php';
 
 // Table may not exist yet (before first webhook)
 mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (
