@@ -1,100 +1,106 @@
-<?php $page_title="App Users";
-    include("includes/header.php");
-    require("includes/lb_helper.php");
+<?php
+// ── Bootstrap DB before any HTML output (needed for AJAX handlers) ────────────
+include("includes/db_helper.php");
 
-    $tableName = "tbl_users";
-    $targetpage = "manage_users.php";
-    $limit = 20;
+// ── Ensure license table exists ───────────────────────────────────────────────
+mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    device_id  VARCHAR(255) NOT NULL,
+    order_id   VARCHAR(255) DEFAULT '',
+    plan       VARCHAR(20)  DEFAULT 'annual',
+    created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP    NULL,
+    UNIQUE KEY uq_device (device_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-    // ── Ensure license table exists ───────────────────────────────────────────
-    mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (
-        id         INT AUTO_INCREMENT PRIMARY KEY,
-        device_id  VARCHAR(255) NOT NULL,
-        order_id   VARCHAR(255) DEFAULT '',
-        plan       VARCHAR(20)  DEFAULT 'annual',
-        created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-        expires_at TIMESTAMP    NULL,
-        UNIQUE KEY uq_device (device_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
-
-    // ── Handle manual activation (AJAX) ───────────────────────────────────────
-    if (isset($_POST['activate_device'])) {
-        header('Content-Type: application/json');
-        $dev_id = trim($_POST['activate_device']);
-        $plan   = (isset($_POST['activate_plan']) && $_POST['activate_plan'] === 'lifetime') ? 'lifetime' : 'annual';
-        if ($plan === 'annual' && !empty($_POST['activate_expiry'])) {
-            $expires = date('Y-m-d H:i:s', strtotime($_POST['activate_expiry']));
-        } else {
-            $expires = ($plan === 'lifetime') ? null : date('Y-m-d H:i:s', strtotime('+1 year'));
-        }
-        if (empty($dev_id)) {
-            echo json_encode(['success' => false, 'msg' => 'No device ID']);
-            exit;
-        }
-        $order_id = 'MANUAL-' . time();
-        $stmt = $mysqli->prepare(
-            "INSERT INTO tbl_ls_licenses (device_id, order_id, plan, expires_at)
-             VALUES (?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE order_id=VALUES(order_id), plan=VALUES(plan), expires_at=VALUES(expires_at)"
-        );
-        $stmt->bind_param('ssss', $dev_id, $order_id, $plan, $expires);
-        $ok = $stmt->execute();
-        $stmt->close();
-        echo json_encode(['success' => $ok]);
+// ── Handle manual activation (AJAX) ──────────────────────────────────────────
+if (isset($_POST['activate_device'])) {
+    header('Content-Type: application/json');
+    $dev_id = trim($_POST['activate_device']);
+    $plan   = (isset($_POST['activate_plan']) && $_POST['activate_plan'] === 'lifetime') ? 'lifetime' : 'annual';
+    if ($plan === 'annual' && !empty($_POST['activate_expiry'])) {
+        $expires = date('Y-m-d H:i:s', strtotime($_POST['activate_expiry']));
+    } else {
+        $expires = ($plan === 'lifetime') ? null : date('Y-m-d H:i:s', strtotime('+1 year'));
+    }
+    if (empty($dev_id)) {
+        echo json_encode(['success' => false, 'msg' => 'No device ID']);
         exit;
     }
+    $order_id = 'MANUAL-' . time();
+    $stmt = $mysqli->prepare(
+        "INSERT INTO tbl_ls_licenses (device_id, order_id, plan, expires_at)
+         VALUES (?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE order_id=VALUES(order_id), plan=VALUES(plan), expires_at=VALUES(expires_at)"
+    );
+    $stmt->bind_param('ssss', $dev_id, $order_id, $plan, $expires);
+    $ok = $stmt->execute();
+    $stmt->close();
+    echo json_encode(['success' => (bool)$ok]);
+    exit;
+}
 
-    // ── Handle revoke license (AJAX) ──────────────────────────────────────────
-    if (isset($_POST['revoke_device'])) {
-        header('Content-Type: application/json');
-        $dev_id = trim($_POST['revoke_device']);
-        $stmt = $mysqli->prepare("DELETE FROM tbl_ls_licenses WHERE device_id = ?");
-        $stmt->bind_param('s', $dev_id);
-        $ok = $stmt->execute();
-        $stmt->close();
-        echo json_encode(['success' => $ok]);
-        exit;
-    }
+// ── Handle revoke license (AJAX) ──────────────────────────────────────────────
+if (isset($_POST['revoke_device'])) {
+    header('Content-Type: application/json');
+    $dev_id = trim($_POST['revoke_device']);
+    $stmt = $mysqli->prepare("DELETE FROM tbl_ls_licenses WHERE device_id = ?");
+    $stmt->bind_param('s', $dev_id);
+    $ok = $stmt->execute();
+    $stmt->close();
+    echo json_encode(['success' => (bool)$ok]);
+    exit;
+}
 
-    // ── Pre-load all licenses into an associative array ───────────────────────
-    $licenses = [];
-    $lic_res = mysqli_query($mysqli, "SELECT device_id, plan, expires_at FROM tbl_ls_licenses");
-    while ($lr = mysqli_fetch_assoc($lic_res)) {
-        $licenses[$lr['device_id']] = $lr;
-    }
+// ── Handle delete user (AJAX) ─────────────────────────────────────────────────
+if (isset($_POST['delete_id'])) {
+    header('Content-Type: application/json');
+    $del_id = (int)$_POST['delete_id'];
+    mysqli_query($mysqli, "DELETE FROM tbl_users WHERE id='$del_id'");
+    echo json_encode(['success' => 1]);
+    exit;
+}
 
-    // Search
-    $keyword = '';
-    $whereClause = '';
-    if (isset($_GET['keyword']) && !empty(trim($_GET['keyword']))) {
-        $keyword = mysqli_real_escape_string($mysqli, trim($_GET['keyword']));
-        $whereClause = "WHERE (username LIKE '%$keyword%' OR server_url LIKE '%$keyword%')";
-    }
+// ── Now output HTML ───────────────────────────────────────────────────────────
+$page_title = "App Users";
+include("includes/header.php");
+require("includes/lb_helper.php");
 
-    $query = "SELECT COUNT(*) as num FROM $tableName $whereClause";
-    $total_pages = mysqli_fetch_array(mysqli_query($mysqli, $query));
-    $total_pages = $total_pages['num'];
+$tableName = "tbl_users";
+$targetpage = "manage_users.php";
+$limit = 20;
 
-    $stages = 3;
-    $page = 0;
-    if (isset($_GET['page'])) {
-        $page = mysqli_real_escape_string($mysqli, $_GET['page']);
-    }
-    $start = $page ? ($page - 1) * $limit : 0;
+// ── Pre-load all licenses into an associative array ───────────────────────────
+$licenses = [];
+$lic_res = mysqli_query($mysqli, "SELECT device_id, plan, expires_at FROM tbl_ls_licenses");
+while ($lr = mysqli_fetch_assoc($lic_res)) {
+    $licenses[$lr['device_id']] = $lr;
+}
 
-    $sql_query = "SELECT * FROM $tableName $whereClause ORDER BY last_seen DESC LIMIT $start, $limit";
-    $result = mysqli_query($mysqli, $sql_query) or die(mysqli_error($mysqli));
+// Search
+$keyword = '';
+$whereClause = '';
+if (isset($_GET['keyword']) && !empty(trim($_GET['keyword']))) {
+    $keyword = mysqli_real_escape_string($mysqli, trim($_GET['keyword']));
+    $whereClause = "WHERE (username LIKE '%$keyword%' OR server_url LIKE '%$keyword%')";
+}
 
-    // Handle AJAX delete
-    if (isset($_POST['delete_id'])) {
-        $del_id = (int)$_POST['delete_id'];
-        mysqli_query($mysqli, "DELETE FROM tbl_users WHERE id='$del_id'");
-        echo json_encode(['success' => 1]);
-        exit();
-    }
+$query = "SELECT COUNT(*) as num FROM $tableName $whereClause";
+$total_pages = mysqli_fetch_array(mysqli_query($mysqli, $query));
+$total_pages = $total_pages['num'];
 
-    // Handle send notification to selected users
-    $notify_result = '';
+$stages = 3;
+$page = 0;
+if (isset($_GET['page'])) {
+    $page = mysqli_real_escape_string($mysqli, $_GET['page']);
+}
+$start = $page ? ($page - 1) * $limit : 0;
+
+$sql_query = "SELECT * FROM $tableName $whereClause ORDER BY last_seen DESC LIMIT $start, $limit";
+$result = mysqli_query($mysqli, $sql_query) or die(mysqli_error($mysqli));
+
+// Handle send notification to selected users
+$notify_result = '';
     if (isset($_POST['send_notification'])) {
         $fcm_tokens   = isset($_POST['player_ids']) ? $_POST['player_ids'] : [];
         $notify_title = isset($_POST['notify_title']) ? trim($_POST['notify_title']) : '';
