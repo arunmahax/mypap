@@ -150,12 +150,12 @@ else if($get_helper['helper_name']=="register_device") {
             "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, last_seen)
              VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
              ON DUPLICATE KEY UPDATE
-               onesignal_player_id = VALUES(onesignal_player_id),
-               server_url          = VALUES(server_url),
-               username            = VALUES(username),
-               password            = VALUES(password),
-               exp_date            = VALUES(exp_date),
-               app_version         = VALUES(app_version),
+               onesignal_player_id = IF(VALUES(onesignal_player_id) != '', VALUES(onesignal_player_id), onesignal_player_id),
+               server_url          = IF(VALUES(server_url) != '', VALUES(server_url), server_url),
+               username            = IF(VALUES(username) != '', VALUES(username), username),
+               password            = IF(VALUES(password) != '', VALUES(password), password),
+               exp_date            = IF(VALUES(exp_date) != '', VALUES(exp_date), exp_date),
+               app_version         = IF(VALUES(app_version) != '', VALUES(app_version), app_version),
                last_seen           = NOW()"
         );
         $stmt->bind_param('sssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version);

@@ -243,13 +243,19 @@ $notify_result = '';
                     <i class="ri-smartphone-line text-primary me-2" style="font-size:20px;"></i>
                     <span class="fw-semibold"><?= $page_title ?> (<?= $total_pages ?>)</span>
                 </div>
-                <form method="GET" action="manage_users.php" class="d-flex mt-2 mt-md-0">
-                    <input type="text" name="keyword" class="form-control form-control-sm me-2" placeholder="Search username / server..." value="<?= htmlspecialchars($keyword) ?>">
-                    <button type="submit" class="btn btn-sm btn-primary">Search</button>
-                    <?php if ($keyword): ?>
-                        <a href="manage_users.php" class="btn btn-sm btn-outline-secondary ms-1">Clear</a>
-                    <?php endif; ?>
-                </form>
+                <div class="d-flex align-items-center gap-2 mt-2 mt-md-0">
+                    <button type="button" class="btn btn-sm btn-success" id="btn_activate_any"
+                            title="Activate a license for any device by its Device ID">
+                        <i class="ri-shield-keyhole-line me-1"></i> Activate by Device ID
+                    </button>
+                    <form method="GET" action="manage_users.php" class="d-flex">
+                        <input type="text" name="keyword" class="form-control form-control-sm me-2" placeholder="Search username / server..." value="<?= htmlspecialchars($keyword) ?>">
+                        <button type="submit" class="btn btn-sm btn-primary">Search</button>
+                        <?php if ($keyword): ?>
+                            <a href="manage_users.php" class="btn btn-sm btn-outline-secondary ms-1">Clear</a>
+                        <?php endif; ?>
+                    </form>
+                </div>
             </div>
 
             <div class="card-body p-4">
@@ -493,7 +499,7 @@ document.getElementById('activate_plan')?.addEventListener('change', function() 
     document.getElementById('expiry_row').style.display = this.value === 'lifetime' ? 'none' : '';
 });
 
-// Open activate modal
+// Open activate modal from a user row
 let currentDevice = '';
 document.querySelectorAll('.btn_activate_user').forEach(btn => {
     btn.addEventListener('click', function() {
@@ -505,6 +511,17 @@ document.querySelectorAll('.btn_activate_user').forEach(btn => {
         document.getElementById('expiry_row').style.display = '';
         new bootstrap.Modal(document.getElementById('activateModal')).show();
     });
+});
+
+// Open activate modal standalone (no user row needed — admin enters device ID manually)
+document.getElementById('btn_activate_any')?.addEventListener('click', function() {
+    currentDevice = '';
+    document.getElementById('activate_username_label').textContent = 'Manual Activation';
+    document.getElementById('activate_device_input').value = '';
+    document.getElementById('activate_plan').value = 'annual';
+    document.getElementById('activate_expiry').value = '';
+    document.getElementById('expiry_row').style.display = '';
+    new bootstrap.Modal(document.getElementById('activateModal')).show();
 });
 
 // Confirm activation
