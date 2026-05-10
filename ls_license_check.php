@@ -49,4 +49,7 @@ $licensed = ($plan === 'lifetime')
     || ($expires === null)
     || (strtotime($expires) > time());
 
-echo json_encode(['licensed' => $licensed, 'plan' => $plan]);
+// expires_ts: Unix timestamp for annual plans (0 = lifetime/unlimited)
+$expires_ts = ($plan === 'lifetime' || $expires === null) ? 0 : (int) strtotime($expires);
+
+echo json_encode(['licensed' => $licensed, 'plan' => $plan, 'expires_ts' => $expires_ts]);
