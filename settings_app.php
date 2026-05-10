@@ -35,6 +35,20 @@
         header( "Location:settings_app.php");
         exit;
         
+    } else if(isset($_POST['billing_submit'])){
+        
+        $data = array(
+            'plan_annual_enabled'   => ($_POST['plan_annual_enabled'])   ? 'true' : 'false',
+            'plan_lifetime_enabled' => ($_POST['plan_lifetime_enabled']) ? 'true' : 'false'
+        );
+        
+        $settings_edit = Update('tbl_settings', $data, "WHERE id = '1'");
+        
+        $_SESSION['msg'] = "11";
+        $_SESSION['class'] = 'success';
+        header("Location:settings_app.php");
+        exit;
+
     } else if(isset($_POST['app_submit'])){
         
         $data = array(
@@ -188,6 +202,11 @@
                             <button class="nav-link" id="nsofts_setting_9" data-bs-toggle="pill" data-bs-target="#nsofts_setting_content_9" type="button" role="tab" aria-controls="nsofts_setting_9" aria-selected="false">
                                 <i class="ri-advertisement-line"></i>
                                 <span>Custom ads</span>
+                            </button>
+
+                            <button class="nav-link" id="nsofts_setting_10" data-bs-toggle="pill" data-bs-target="#nsofts_setting_content_10" type="button" role="tab" aria-controls="nsofts_setting_10" aria-selected="false">
+                                <i class="ri-price-tag-3-line"></i>
+                                <span>Billing Plans</span>
                             </button>
 
                         </div>
@@ -492,6 +511,35 @@
                                         </div>
                                     </div>
                                     <button type="submit" name="custom_submit" class="btn btn-primary" style="min-width: 120px;">Save</button>
+                                </form>
+                            </div>
+
+                            <!--Billing Plans-->
+                            <div class="tab-pane fade" id="nsofts_setting_content_10" role="tabpanel" aria-labelledby="nsofts_setting_10" tabindex="0">
+                                <form action="" name="settings_billing" method="POST" enctype="multipart/form-data">
+                                    <h4 class="mb-4">Billing Plans</h4>
+                                    <p class="text-muted mb-4">Enable or disable plans shown to sideloaded users in the app paywall. Amazon IAP is unaffected by these settings.</p>
+                                    <div class="mb-3 row">
+                                        <label for="" class="col-sm-2 col-form-label">Annual Plan</label>
+                                        <div class="col-sm-10">
+                                            <div class="nsofts-switch d-flex align-items-center">
+                                                <input type="checkbox" id="plan_annual_enabled" name="plan_annual_enabled" value="true" class="cbx hidden" <?php if(($settings_data['plan_annual_enabled'] ?? 'true')=='true'){ echo 'checked'; }?>/>
+                                                <label for="plan_annual_enabled" class="nsofts-switch__label"></label>
+                                            </div>
+                                            <small class="text-muted">Show the Annual subscription button in the paywall</small>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3 row">
+                                        <label for="" class="col-sm-2 col-form-label">Lifetime Plan</label>
+                                        <div class="col-sm-10">
+                                            <div class="nsofts-switch d-flex align-items-center">
+                                                <input type="checkbox" id="plan_lifetime_enabled" name="plan_lifetime_enabled" value="true" class="cbx hidden" <?php if(($settings_data['plan_lifetime_enabled'] ?? 'true')=='true'){ echo 'checked'; }?>/>
+                                                <label for="plan_lifetime_enabled" class="nsofts-switch__label"></label>
+                                            </div>
+                                            <small class="text-muted">Show the Lifetime purchase button in the paywall</small>
+                                        </div>
+                                    </div>
+                                    <button type="submit" name="billing_submit" class="btn btn-primary" style="min-width: 120px;">Save</button>
                                 </form>
                             </div>
                             

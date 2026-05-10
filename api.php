@@ -63,6 +63,10 @@ if($get_helper['helper_name']=="app_details"){
         
         // App Themes
         $data_arr['is_theme'] = $data['is_theme'];
+
+        // Billing Plans
+        $data_arr['plan_annual_enabled']   = $data['plan_annual_enabled']   ?? 'true';
+        $data_arr['plan_lifetime_enabled'] = $data['plan_lifetime_enabled'] ?? 'true';
         
         array_push($jsonObj,$data_arr);
     }
