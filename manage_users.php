@@ -267,6 +267,7 @@ $notify_result = '';
                                         <th>Expiry Date</th>
                                         <th>Last Seen</th>
                                         <th>App Version</th>
+                                        <th>Device ID</th>
                                         <th>License</th>
                                         <th>Actions</th>
                                     </tr>
@@ -317,6 +318,15 @@ $notify_result = '';
                                             <td><?= htmlspecialchars($row['app_version'] ?: '—') ?></td>
                                             <?php
                                                 $dev = $row['device_id'] ?? '';
+                                            ?>
+                                            <td>
+                                                <?php if (!empty($dev)): ?>
+                                                    <span title="<?= htmlspecialchars($dev) ?>" style="cursor:pointer;font-family:monospace;font-size:11px;" onclick="navigator.clipboard.writeText('<?= htmlspecialchars($dev) ?>')" class="text-muted"><?= htmlspecialchars(substr($dev,0,10)).'…' ?></span>
+                                                <?php else: ?>
+                                                    <span class="text-danger small">—</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <?php
                                                 $lic = isset($licenses[$dev]) ? $licenses[$dev] : null;
                                                 $lic_badge = '<span class="badge bg-secondary">None</span>';
                                                 $lic_active = false;
@@ -410,7 +420,14 @@ $notify_result = '';
             </div>
             <div class="modal-body">
                 <p class="mb-1">User: <strong id="activate_username_label"></strong></p>
-                <p class="text-muted small mb-3" id="activate_device_label" style="word-break:break-all;"></p>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Device ID <small class="text-muted">(Android ID from App Users table)</small></label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" id="activate_device_input" class="form-control font-monospace" placeholder="Paste device ID here if empty…">
+                        <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.readText().then(t=>document.getElementById('activate_device_input').value=t)" title="Paste from clipboard"><i class="ri-clipboard-line"></i></button>
+                    </div>
+                    <small class="text-muted">Copy the Device ID from the Device ID column in the table above, or get it from the user's app Profile screen.</small>
+                </div>
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Plan</label>
                     <select id="activate_plan" class="form-select">
@@ -482,7 +499,7 @@ document.querySelectorAll('.btn_activate_user').forEach(btn => {
     btn.addEventListener('click', function() {
         currentDevice = this.dataset.device;
         document.getElementById('activate_username_label').textContent = this.dataset.username;
-        document.getElementById('activate_device_label').textContent = 'Device ID: ' + currentDevice;
+        document.getElementById('activate_device_input').value = currentDevice;
         document.getElementById('activate_plan').value = 'annual';
         document.getElementById('activate_expiry').value = '';
         document.getElementById('expiry_row').style.display = '';
@@ -492,9 +509,14 @@ document.querySelectorAll('.btn_activate_user').forEach(btn => {
 
 // Confirm activation
 document.getElementById('btn_confirm_activate')?.addEventListener('click', function() {
+    const deviceId = document.getElementById('activate_device_input').value.trim();
+    if (!deviceId) {
+        alert('Device ID is required. Copy it from the Device ID column or ask the user to share their Device ID from their Profile screen.');
+        return;
+    }
     const plan   = document.getElementById('activate_plan').value;
     const expiry = document.getElementById('activate_expiry').value;
-    const body   = 'activate_device=' + encodeURIComponent(currentDevice)
+    const body   = 'activate_device=' + encodeURIComponent(deviceId)
                  + '&activate_plan='   + encodeURIComponent(plan)
                  + '&activate_expiry=' + encodeURIComponent(expiry);
 

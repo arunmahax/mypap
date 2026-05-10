@@ -10,6 +10,9 @@ $file_path = getBaseUrl();
 /** @var mysqli $mysqli */
 $mysqli->set_charset('utf8mb4');
 
+// Ensure device_id column exists in tbl_users (added for license activation feature)
+$mysqli->query("ALTER TABLE tbl_users ADD COLUMN IF NOT EXISTS device_id VARCHAR(64) NOT NULL DEFAULT ''");
+
 date_default_timezone_set("Asia/Colombo");
 
 /** @var array $settings_details */
