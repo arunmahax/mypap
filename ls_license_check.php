@@ -7,6 +7,10 @@
  * Returns JSON: {"licensed": true/false, "plan": "annual"|"lifetime"|""}
  */
 
+// Must be first — suppress PHP warnings/notices that would corrupt JSON output
+error_reporting(0);
+ini_set('display_errors', '0');
+
 header('Content-Type: application/json');
 
 $device_id = isset($_GET['device_id']) ? trim($_GET['device_id']) : '';
