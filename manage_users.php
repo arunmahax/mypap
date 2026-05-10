@@ -6,6 +6,63 @@
     $targetpage = "manage_users.php";
     $limit = 20;
 
+    // ── Ensure license table exists ───────────────────────────────────────────
+    mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        device_id  VARCHAR(255) NOT NULL,
+        order_id   VARCHAR(255) DEFAULT '',
+        plan       VARCHAR(20)  DEFAULT 'annual',
+        created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP    NULL,
+        UNIQUE KEY uq_device (device_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    // ── Handle manual activation (AJAX) ───────────────────────────────────────
+    if (isset($_POST['activate_device'])) {
+        header('Content-Type: application/json');
+        $dev_id = trim($_POST['activate_device']);
+        $plan   = (isset($_POST['activate_plan']) && $_POST['activate_plan'] === 'lifetime') ? 'lifetime' : 'annual';
+        if ($plan === 'annual' && !empty($_POST['activate_expiry'])) {
+            $expires = date('Y-m-d H:i:s', strtotime($_POST['activate_expiry']));
+        } else {
+            $expires = ($plan === 'lifetime') ? null : date('Y-m-d H:i:s', strtotime('+1 year'));
+        }
+        if (empty($dev_id)) {
+            echo json_encode(['success' => false, 'msg' => 'No device ID']);
+            exit;
+        }
+        $order_id = 'MANUAL-' . time();
+        $stmt = $mysqli->prepare(
+            "INSERT INTO tbl_ls_licenses (device_id, order_id, plan, expires_at)
+             VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE order_id=VALUES(order_id), plan=VALUES(plan), expires_at=VALUES(expires_at)"
+        );
+        $stmt->bind_param('ssss', $dev_id, $order_id, $plan, $expires);
+        $ok = $stmt->execute();
+        $stmt->close();
+        echo json_encode(['success' => $ok]);
+        exit;
+    }
+
+    // ── Handle revoke license (AJAX) ──────────────────────────────────────────
+    if (isset($_POST['revoke_device'])) {
+        header('Content-Type: application/json');
+        $dev_id = trim($_POST['revoke_device']);
+        $stmt = $mysqli->prepare("DELETE FROM tbl_ls_licenses WHERE device_id = ?");
+        $stmt->bind_param('s', $dev_id);
+        $ok = $stmt->execute();
+        $stmt->close();
+        echo json_encode(['success' => $ok]);
+        exit;
+    }
+
+    // ── Pre-load all licenses into an associative array ───────────────────────
+    $licenses = [];
+    $lic_res = mysqli_query($mysqli, "SELECT device_id, plan, expires_at FROM tbl_ls_licenses");
+    while ($lr = mysqli_fetch_assoc($lic_res)) {
+        $licenses[$lr['device_id']] = $lr;
+    }
+
     // Search
     $keyword = '';
     $whereClause = '';
@@ -204,6 +261,7 @@
                                         <th>Expiry Date</th>
                                         <th>Last Seen</th>
                                         <th>App Version</th>
+                                        <th>License</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -251,7 +309,41 @@
                                             <td class="<?= $exp_class ?>"><?= $exp_label ?></td>
                                             <td><?= $row['last_seen'] ? htmlspecialchars($row['last_seen']) : '—' ?></td>
                                             <td><?= htmlspecialchars($row['app_version'] ?: '—') ?></td>
+                                            <?php
+                                                $dev = $row['device_id'] ?? '';
+                                                $lic = isset($licenses[$dev]) ? $licenses[$dev] : null;
+                                                $lic_badge = '<span class="badge bg-secondary">None</span>';
+                                                $lic_active = false;
+                                                if ($lic) {
+                                                    if ($lic['plan'] === 'lifetime') {
+                                                        $lic_badge = '<span class="badge bg-success">Lifetime</span>';
+                                                        $lic_active = true;
+                                                    } else {
+                                                        $exp_ts = $lic['expires_at'] ? strtotime($lic['expires_at']) : 0;
+                                                        if ($exp_ts > time()) {
+                                                            $lic_badge = '<span class="badge bg-primary">Annual</span><br><small class="text-muted">'.date('Y-m-d', $exp_ts).'</small>';
+                                                            $lic_active = true;
+                                                        } else {
+                                                            $lic_badge = '<span class="badge bg-danger">Expired</span>';
+                                                        }
+                                                    }
+                                                }
+                                            ?>
+                                            <td><?= $lic_badge ?></td>
                                             <td>
+                                                <a href="javascript:void(0)" class="btn btn-outline-success btn-sm btn_activate_user me-1"
+                                                    data-device="<?= htmlspecialchars($dev) ?>"
+                                                    data-username="<?= htmlspecialchars($row['username']) ?>"
+                                                    title="Activate License">
+                                                    <i class="ri-shield-keyhole-line"></i>
+                                                </a>
+                                                <?php if ($lic_active): ?>
+                                                <a href="javascript:void(0)" class="btn btn-outline-warning btn-sm btn_revoke_user me-1"
+                                                    data-device="<?= htmlspecialchars($dev) ?>"
+                                                    title="Revoke License">
+                                                    <i class="ri-shield-cross-line"></i>
+                                                </a>
+                                                <?php endif; ?>
                                                 <a href="javascript:void(0)" class="btn btn-outline-danger btn-sm btn_delete_user" data-id="<?= $row['id'] ?>" title="Delete">
                                                     <i class="ri-delete-bin-line"></i>
                                                 </a>
@@ -300,6 +392,41 @@
 </main>
 <!-- End: main -->
 
+<?php include("includes/footer.php"); ?>
+
+<!-- Activation Modal -->
+<div class="modal fade" id="activateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ri-shield-keyhole-line me-2 text-success"></i>Activate License</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-1">User: <strong id="activate_username_label"></strong></p>
+                <p class="text-muted small mb-3" id="activate_device_label" style="word-break:break-all;"></p>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Plan</label>
+                    <select id="activate_plan" class="form-select">
+                        <option value="annual">Annual (1 Year)</option>
+                        <option value="lifetime">Lifetime (Forever)</option>
+                    </select>
+                </div>
+                <div class="mb-3" id="expiry_row">
+                    <label class="form-label fw-semibold">Expiry Date <small class="text-muted">(leave blank = +1 year from today)</small></label>
+                    <input type="date" id="activate_expiry" class="form-control" min="<?= date('Y-m-d') ?>">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="btn_confirm_activate">
+                    <i class="ri-shield-check-line me-1"></i> Activate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Select all checkbox
 document.getElementById('selectAll')?.addEventListener('change', function() {
@@ -321,6 +448,66 @@ document.querySelectorAll('.btn_delete_user').forEach(btn => {
         });
     });
 });
-</script>
 
-<?php include("includes/footer.php"); ?>
+// Revoke license
+document.querySelectorAll('.btn_revoke_user').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const dev = this.dataset.device;
+        if (!confirm('Revoke license for this user?')) return;
+        const row = this.closest('tr');
+        fetch('manage_users.php', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: 'revoke_device=' + encodeURIComponent(dev)
+        }).then(r => r.json()).then(data => {
+            if (data.success) location.reload();
+        });
+    });
+});
+
+// Toggle expiry date field based on plan
+document.getElementById('activate_plan')?.addEventListener('change', function() {
+    document.getElementById('expiry_row').style.display = this.value === 'lifetime' ? 'none' : '';
+});
+
+// Open activate modal
+let currentDevice = '';
+document.querySelectorAll('.btn_activate_user').forEach(btn => {
+    btn.addEventListener('click', function() {
+        currentDevice = this.dataset.device;
+        document.getElementById('activate_username_label').textContent = this.dataset.username;
+        document.getElementById('activate_device_label').textContent = 'Device ID: ' + currentDevice;
+        document.getElementById('activate_plan').value = 'annual';
+        document.getElementById('activate_expiry').value = '';
+        document.getElementById('expiry_row').style.display = '';
+        new bootstrap.Modal(document.getElementById('activateModal')).show();
+    });
+});
+
+// Confirm activation
+document.getElementById('btn_confirm_activate')?.addEventListener('click', function() {
+    const plan   = document.getElementById('activate_plan').value;
+    const expiry = document.getElementById('activate_expiry').value;
+    const body   = 'activate_device=' + encodeURIComponent(currentDevice)
+                 + '&activate_plan='   + encodeURIComponent(plan)
+                 + '&activate_expiry=' + encodeURIComponent(expiry);
+
+    this.disabled = true;
+    this.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    fetch('manage_users.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: body
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            bootstrap.Modal.getInstance(document.getElementById('activateModal')).hide();
+            location.reload();
+        } else {
+            alert('Activation failed. Please try again.');
+            this.disabled = false;
+            this.innerHTML = '<i class="ri-shield-check-line me-1"></i> Activate';
+        }
+    });
+});
+</script>

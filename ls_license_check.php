@@ -29,9 +29,12 @@ mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (
     UNIQUE KEY uq_device (device_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-$device_id_esc = mysqli_real_escape_string($mysqli, $device_id);
-$row = mysqli_fetch_assoc(mysqli_query($mysqli,
-    "SELECT plan, expires_at FROM tbl_ls_licenses WHERE device_id='$device_id_esc' LIMIT 1"));
+$stmt = $mysqli->prepare("SELECT plan, expires_at FROM tbl_ls_licenses WHERE device_id = ? LIMIT 1");
+$stmt->bind_param('s', $device_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$row    = $result->fetch_assoc();
+$stmt->close();
 
 if (!$row) {
     echo json_encode(['licensed' => false, 'plan' => '']);
