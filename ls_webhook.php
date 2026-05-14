@@ -4,13 +4,23 @@
  * Endpoint: https://panel.veoplayer.com/ls_webhook.php
  *
  * Events to enable in LemonSqueezy: order_created
- * Signing secret: whsec_veoplayer_2026_key
+ * Signing secret: set in Admin Panel → App Settings → Billing Plans
  */
 
-$signing_secret = 'whsec_veoplayer_2026_key';
+// DB connection — must come before signature check so we can read the secret
+require_once __DIR__ . '/includes/db_helper.php';
+
+$row = mysqli_fetch_assoc(mysqli_query($mysqli, "SELECT ls_webhook_secret FROM tbl_settings WHERE id=1 LIMIT 1"));
+$signing_secret = $row ? trim($row['ls_webhook_secret']) : '';
 
 $payload   = file_get_contents('php://input');
 $signature = isset($_SERVER['HTTP_X_SIGNATURE']) ? $_SERVER['HTTP_X_SIGNATURE'] : '';
+
+// Reject if secret is not configured
+if (empty($signing_secret)) {
+    http_response_code(500);
+    exit('Webhook secret not configured');
+}
 
 // Verify HMAC-SHA256 signature
 $expected = hash_hmac('sha256', $payload, $signing_secret);
@@ -47,9 +57,6 @@ if (empty($device_id)) {
 
 $plan       = (stripos($product_name, 'lifetime') !== false) ? 'lifetime' : 'annual';
 $expires_at = ($plan === 'lifetime') ? null : date('Y-m-d H:i:s', strtotime('+1 year'));
-
-// DB connection
-require_once __DIR__ . '/includes/db.php';
 
 // Create table if not exists
 mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (

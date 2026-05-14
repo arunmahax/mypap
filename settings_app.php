@@ -36,14 +36,15 @@
         exit;
         
     } else if(isset($_POST['billing_submit'])){
-        
+
         $data = array(
             'plan_annual_enabled'   => ($_POST['plan_annual_enabled'])   ? 'true' : 'false',
-            'plan_lifetime_enabled' => ($_POST['plan_lifetime_enabled']) ? 'true' : 'false'
+            'plan_lifetime_enabled' => ($_POST['plan_lifetime_enabled']) ? 'true' : 'false',
+            'ls_webhook_secret'     => trim($_POST['ls_webhook_secret'])
         );
-        
+
         $settings_edit = Update('tbl_settings', $data, "WHERE id = '1'");
-        
+
         $_SESSION['msg'] = "11";
         $_SESSION['class'] = 'success';
         header("Location:settings_app.php");
@@ -519,6 +520,7 @@
                                 <form action="" name="settings_billing" method="POST" enctype="multipart/form-data">
                                     <h4 class="mb-4">Billing Plans</h4>
                                     <p class="text-muted mb-4">Enable or disable plans shown to sideloaded users in the app paywall. Amazon IAP is unaffected by these settings.</p>
+
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Annual Plan</label>
                                         <div class="col-sm-10">
@@ -539,6 +541,22 @@
                                             <small class="text-muted">Show the Lifetime purchase button in the paywall</small>
                                         </div>
                                     </div>
+
+                                    <hr class="my-4">
+                                    <h5 class="mb-3">Lemon Squeezy Webhook</h5>
+                                    <div class="mb-3 row">
+                                        <label for="ls_webhook_secret" class="col-sm-2 col-form-label">
+                                            Signing Secret
+                                            <small class="d-block text-muted fw-normal">From LemonSqueezy → Settings → Webhooks</small>
+                                        </label>
+                                        <div class="col-sm-10">
+                                            <input type="text" class="form-control" id="ls_webhook_secret" name="ls_webhook_secret"
+                                                placeholder="whsec_..."
+                                                value="<?php echo htmlspecialchars($settings_data['ls_webhook_secret'] ?? ''); ?>">
+                                            <small class="text-muted">Used to verify webhook requests from Lemon Squeezy. Never share or commit this value.</small>
+                                        </div>
+                                    </div>
+
                                     <button type="submit" name="billing_submit" class="btn btn-primary" style="min-width: 120px;">Save</button>
                                 </form>
                             </div>

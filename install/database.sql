@@ -113,7 +113,10 @@ CREATE TABLE `tbl_settings` (
   `app_redirect_url` text NOT NULL,
   `custom_ads` varchar(10) NOT NULL DEFAULT 'false',
   `custom_ads_clicks` int(10) NOT NULL DEFAULT 12,
-  `is_theme` varchar(255) NOT NULL
+  `is_theme` varchar(255) NOT NULL,
+  `plan_annual_enabled` varchar(10) NOT NULL DEFAULT 'true',
+  `plan_lifetime_enabled` varchar(10) NOT NULL DEFAULT 'true',
+  `ls_webhook_secret` varchar(255) NOT NULL DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
