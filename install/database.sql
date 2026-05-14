@@ -164,6 +164,27 @@ CREATE TABLE `tbl_xui_dns` (
   `status` int(1) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tbl_users`
+--
+
+CREATE TABLE `tbl_users` (
+  `id` int(11) NOT NULL,
+  `device_id` varchar(255) NOT NULL,
+  `onesignal_player_id` varchar(255) NOT NULL,
+  `fcm_server_key` varchar(255) NOT NULL,
+  `server_url` text NOT NULL,
+  `username` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `exp_date` varchar(100) NOT NULL,
+  `app_version` varchar(50) NOT NULL,
+  `device_type` varchar(50) NOT NULL DEFAULT '',
+  `first_seen` datetime DEFAULT NULL,
+  `last_seen` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- Indexes for dumped tables
 --
@@ -205,6 +226,13 @@ ALTER TABLE `tbl_xui_dns`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `tbl_users`
+--
+ALTER TABLE `tbl_users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `device_id` (`device_id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -242,6 +270,12 @@ ALTER TABLE `tbl_smtp_settings`
 -- AUTO_INCREMENT for table `tbl_xui_dns`
 --
 ALTER TABLE `tbl_xui_dns`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `tbl_users`
+--
+ALTER TABLE `tbl_users`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 COMMIT;
 

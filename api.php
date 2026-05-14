@@ -137,11 +137,12 @@ else if($get_helper['helper_name']=="register_device") {
     $password            = isset($get_helper['password'])            ? cleanInput($get_helper['password'])            : '';
     $exp_date            = isset($get_helper['exp_date'])            ? cleanInput($get_helper['exp_date'])            : '';
     $app_version         = isset($get_helper['app_version'])         ? cleanInput($get_helper['app_version'])         : '';
+    $device_type         = isset($get_helper['device_type'])         ? cleanInput($get_helper['device_type'])         : '';
 
     if (!empty($device_id)) {
         $stmt = $mysqli->prepare(
-            "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, last_seen)
-             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+            "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, device_type, first_seen, last_seen)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
              ON DUPLICATE KEY UPDATE
                onesignal_player_id = VALUES(onesignal_player_id),
                server_url          = VALUES(server_url),
@@ -149,9 +150,10 @@ else if($get_helper['helper_name']=="register_device") {
                password            = VALUES(password),
                exp_date            = VALUES(exp_date),
                app_version         = VALUES(app_version),
+               device_type         = IF(VALUES(device_type) != '', VALUES(device_type), device_type),
                last_seen           = NOW()"
         );
-        $stmt->bind_param('sssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version);
+        $stmt->bind_param('ssssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version, $device_type);
         $stmt->execute();
         $stmt->close();
         $set[$API_NAME][] = array('success' => '1', 'MSG' => 'Device registered');

@@ -135,6 +135,8 @@
                                         <th>Expiry Date</th>
                                         <th>Last Seen</th>
                                         <th>App Version</th>
+                                        <th>Device Type</th>
+                                        <th>First Installed</th>
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
@@ -182,6 +184,21 @@
                                             <td class="<?= $exp_class ?>"><?= $exp_label ?></td>
                                             <td><?= $row['last_seen'] ? htmlspecialchars($row['last_seen']) : '—' ?></td>
                                             <td><?= htmlspecialchars($row['app_version'] ?: '—') ?></td>
+                                            <td>
+                                                <?php
+                                                    $dtype = strtolower(trim($row['device_type'] ?? ''));
+                                                    if ($dtype === 'tv' || $dtype === 'android_tv' || $dtype === 'androidtv') {
+                                                        echo '<span class="badge bg-info text-dark"><i class="ri-tv-2-line me-1"></i>TV</span>';
+                                                    } elseif ($dtype === 'tablet') {
+                                                        echo '<span class="badge bg-secondary"><i class="ri-tablet-line me-1"></i>Tablet</span>';
+                                                    } elseif ($dtype !== '') {
+                                                        echo '<span class="badge bg-primary"><i class="ri-smartphone-line me-1"></i>Phone</span>';
+                                                    } else {
+                                                        echo '<span class="text-muted">—</span>';
+                                                    }
+                                                ?>
+                                            </td>
+                                            <td><?= !empty($row['first_seen']) ? htmlspecialchars($row['first_seen']) : '<span class="text-muted">—</span>' ?></td>
                                             <td>
                                                 <a href="javascript:void(0)" class="btn btn-outline-danger btn-sm btn_delete_user" data-id="<?= $row['id'] ?>" title="Delete">
                                                     <i class="ri-delete-bin-line"></i>
