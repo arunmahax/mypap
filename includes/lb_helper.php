@@ -15,9 +15,21 @@
  * under the License.
  */
 
+# Fix control characters in service account JSON (actual newlines inside string values)
+function fix_service_account_json(string $raw): string {
+    $raw = trim($raw);
+    if (json_decode($raw) !== null) return $raw;
+    // Replace actual newline/CR characters inside JSON string values with \n escape
+    $fixed = preg_replace_callback('/"((?:[^"\\\\]|\\\\.)*)"/s', function($m) {
+        return '"' . str_replace(["\r\n", "\r", "\n"], '\\n', $m[1]) . '"';
+    }, $raw);
+    return $fixed ?? $raw;
+}
+
 # Insert Data
 function Insert(string $table, array $data){
     global $mysqli;
+
     //print_r($data);
 
     $fields = array_keys($data);

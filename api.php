@@ -10,6 +10,13 @@ $file_path = getBaseUrl();
 /** @var mysqli $mysqli */
 $mysqli->set_charset('utf8mb4');
 
+// Ensure device_id column exists in tbl_users.
+// NOTE: "ADD COLUMN IF NOT EXISTS" is MariaDB-only — MySQL 8 needs information_schema check.
+$col_chk = $mysqli->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbl_users' AND COLUMN_NAME = 'device_id'");
+if ($col_chk && $col_chk->fetch_row()[0] == 0) {
+    $mysqli->query("ALTER TABLE tbl_users ADD COLUMN device_id VARCHAR(64) NOT NULL DEFAULT ''");
+}
+
 date_default_timezone_set("Asia/Colombo");
 
 /** @var array $settings_details */
@@ -63,6 +70,10 @@ if($get_helper['helper_name']=="app_details"){
         
         // App Themes
         $data_arr['is_theme'] = $data['is_theme'];
+
+        // Billing Plans
+        $data_arr['plan_annual_enabled']   = $data['plan_annual_enabled']   ?? 'true';
+        $data_arr['plan_lifetime_enabled'] = $data['plan_lifetime_enabled'] ?? 'true';
         
         array_push($jsonObj,$data_arr);
     }
@@ -140,20 +151,44 @@ else if($get_helper['helper_name']=="register_device") {
     $device_type         = isset($get_helper['device_type'])         ? cleanInput($get_helper['device_type'])         : '';
 
     if (!empty($device_id)) {
-        $stmt = $mysqli->prepare(
-            "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, device_type, first_seen, last_seen)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-             ON DUPLICATE KEY UPDATE
-               onesignal_player_id = VALUES(onesignal_player_id),
-               server_url          = VALUES(server_url),
-               username            = VALUES(username),
-               password            = VALUES(password),
-               exp_date            = VALUES(exp_date),
-               app_version         = VALUES(app_version),
-               device_type         = IF(VALUES(device_type) != '', VALUES(device_type), device_type),
-               last_seen           = NOW()"
-        );
-        $stmt->bind_param('ssssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version, $device_type);
+        $check = $mysqli->prepare("SELECT id FROM tbl_users WHERE device_id = ? LIMIT 1");
+        $check->bind_param('s', $device_id);
+        $check->execute();
+        $check->store_result();
+        $exists = $check->num_rows > 0;
+        $check->close();
+
+        if ($exists) {
+            $stmt = $mysqli->prepare(
+                "UPDATE tbl_users SET
+                   onesignal_player_id = IF(? != '', ?, onesignal_player_id),
+                   server_url          = IF(? != '', ?, server_url),
+                   username            = IF(? != '', ?, username),
+                   password            = IF(? != '', ?, password),
+                   exp_date            = IF(? != '', ?, exp_date),
+                   app_version         = IF(? != '', ?, app_version),
+                   device_type         = IF(? != '', ?, device_type),
+                   last_seen           = NOW()
+                 WHERE device_id = ?"
+            );
+            $stmt->bind_param('sssssssssssssssss',
+                $onesignal_player_id, $onesignal_player_id,
+                $server_url,          $server_url,
+                $username,            $username,
+                $password,            $password,
+                $exp_date,            $exp_date,
+                $app_version,         $app_version,
+                $device_type,         $device_type,
+                $device_id
+            );
+        } else {
+            // New device — insert with first_seen timestamp (never updated after this)
+            $stmt = $mysqli->prepare(
+                "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, device_type, first_seen, last_seen)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+            );
+            $stmt->bind_param('ssssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version, $device_type);
+        }
         $stmt->execute();
         $stmt->close();
         $set[$API_NAME][] = array('success' => '1', 'MSG' => 'Device registered');

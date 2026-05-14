@@ -32,10 +32,14 @@ if ($mysqli->connect_errno) {
     define("APP_LOGO",$settings_details['app_logo']);
     
     if(isset($_SESSION['id'])){
-    	
-    	$profile_qry="SELECT * FROM tbl_admin where id='".$_SESSION['id']."'";
-    	$profile_result=mysqli_query($mysqli,$profile_qry);
-    	$profile_details=mysqli_fetch_assoc($profile_result);
+        // Use prepared statement to prevent SQL injection on session ID
+        $id = (int) $_SESSION['id'];
+        $profile_stmt   = $mysqli->prepare("SELECT * FROM tbl_admin WHERE id = ?");
+        $profile_stmt->bind_param('i', $id);
+        $profile_stmt->execute();
+        $profile_result  = $profile_stmt->get_result();
+        $profile_details = $profile_result->fetch_assoc();
+        $profile_stmt->close();
 
     	define("PROFILE_IMG",$profile_details['image']);
     }
