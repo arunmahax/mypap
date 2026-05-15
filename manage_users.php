@@ -274,6 +274,8 @@ $notify_result = '';
                                         <th>Last Seen</th>
                                         <th>App Version</th>
                                         <th>Device Type</th>
+                                        <th>Country</th>
+                                        <th>Status</th>
                                         <th>First Installed</th>
                                         <th>Device ID</th>
                                         <th>License</th>
@@ -338,6 +340,20 @@ $notify_result = '';
                                                         echo '<span class="badge bg-primary"><i class="ri-smartphone-line me-1"></i>Phone</span>';
                                                     } else {
                                                         echo '<span class="text-muted">—</span>';
+                                                    }
+                                                ?>
+                                            </td>
+                                            <td><?= !empty($row['country']) ? htmlspecialchars($row['country']) : '<span class="text-muted">—</span>' ?></td>
+                                            <td>
+                                                <?php
+                                                    $last = $row['last_seen'] ? strtotime($row['last_seen']) : 0;
+                                                    $diff = time() - $last;
+                                                    if ($diff < 300) {
+                                                        echo '<span class="badge bg-success"><i class="ri-checkbox-blank-circle-fill me-1" style="font-size:8px;"></i>Online</span>';
+                                                    } elseif ($diff < 86400) {
+                                                        echo '<span class="badge bg-warning text-dark"><i class="ri-checkbox-blank-circle-fill me-1" style="font-size:8px;"></i>Today</span>';
+                                                    } else {
+                                                        echo '<span class="badge bg-secondary"><i class="ri-checkbox-blank-circle-fill me-1" style="font-size:8px;"></i>Offline</span>';
                                                     }
                                                 ?>
                                             </td>

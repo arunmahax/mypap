@@ -170,7 +170,14 @@ $mysqli->set_charset("utf8mb4");
                         <span class="nsofts-sidebar-nav__text">App Users</span>
                     </a>
                 </li>
-                
+
+                <li class="nsofts-sidebar-nav__item">
+                    <a href="manage_logs.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_logs.php") { ?>active<?php } ?>">
+                        <i class="ri-file-list-3-line nsofts-sidebar-nav__icon"></i>
+                        <span class="nsofts-sidebar-nav__text">App Logs</span>
+                    </a>
+                </li>
+
                 <li class="nsofts-sidebar-nav__item">
                     <a href="manage_ads.php" class="nsofts-sidebar-nav__link <?php if ($currentFile == "manage_ads.php" or $currentFile == "create_ads.php") { ?>active<?php } ?>">
                         <i class="ri-advertisement-line nsofts-sidebar-nav__icon"></i>

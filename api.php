@@ -150,15 +150,38 @@ else if($get_helper['helper_name']=="register_device") {
     $app_version         = isset($get_helper['app_version'])         ? cleanInput($get_helper['app_version'])         : '';
     $device_type         = isset($get_helper['device_type'])         ? cleanInput($get_helper['device_type'])         : '';
 
+    // Detect real client IP (Cloudflare + proxy aware)
+    $ip_address = trim(explode(',',
+        $_SERVER['HTTP_CF_CONNECTING_IP']
+        ?? $_SERVER['HTTP_X_FORWARDED_FOR']
+        ?? $_SERVER['REMOTE_ADDR']
+        ?? '')[0]);
+
+    // Fetch country name from ip-api.com (free, no key, 3s timeout)
+    function fetchCountryFromIp(string $ip): string {
+        if (empty($ip) || $ip === '127.0.0.1' || substr($ip, 0, 8) === '192.168.') return '';
+        $ch = curl_init("http://ip-api.com/json/{$ip}?fields=country");
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 3, CURLOPT_CONNECTTIMEOUT => 2]);
+        $resp = curl_exec($ch);
+        curl_close($ch);
+        $data = json_decode($resp, true);
+        return $data['country'] ?? '';
+    }
+
     if (!empty($device_id)) {
-        $check = $mysqli->prepare("SELECT id FROM tbl_users WHERE device_id = ? LIMIT 1");
+        // Fetch existing row to compare IP and reuse country if IP unchanged
+        $check = $mysqli->prepare("SELECT id, ip_address, country FROM tbl_users WHERE device_id = ? LIMIT 1");
         $check->bind_param('s', $device_id);
         $check->execute();
-        $check->store_result();
-        $exists = $check->num_rows > 0;
+        $check->bind_result($existing_id, $old_ip, $old_country);
+        $check->fetch();
+        $exists = !empty($existing_id);
         $check->close();
 
         if ($exists) {
+            // Only re-fetch country if IP changed
+            $country = ($ip_address !== $old_ip) ? fetchCountryFromIp($ip_address) : $old_country;
+
             $stmt = $mysqli->prepare(
                 "UPDATE tbl_users SET
                    onesignal_player_id = IF(? != '', ?, onesignal_player_id),
@@ -168,10 +191,12 @@ else if($get_helper['helper_name']=="register_device") {
                    exp_date            = IF(? != '', ?, exp_date),
                    app_version         = IF(? != '', ?, app_version),
                    device_type         = IF(? != '', ?, device_type),
+                   ip_address          = ?,
+                   country             = IF(? != '', ?, country),
                    last_seen           = NOW()
                  WHERE device_id = ?"
             );
-            $stmt->bind_param('sssssssssssssssss',
+            $stmt->bind_param('sssssssssssssssssss',
                 $onesignal_player_id, $onesignal_player_id,
                 $server_url,          $server_url,
                 $username,            $username,
@@ -179,15 +204,18 @@ else if($get_helper['helper_name']=="register_device") {
                 $exp_date,            $exp_date,
                 $app_version,         $app_version,
                 $device_type,         $device_type,
+                $ip_address,
+                $country,             $country,
                 $device_id
             );
         } else {
-            // New device — insert with first_seen timestamp (never updated after this)
+            // New device — fetch country and insert with first_seen
+            $country = fetchCountryFromIp($ip_address);
             $stmt = $mysqli->prepare(
-                "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, device_type, first_seen, last_seen)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
+                "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, device_type, ip_address, country, first_seen, last_seen)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
             );
-            $stmt->bind_param('ssssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version, $device_type);
+            $stmt->bind_param('ssssssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version, $device_type, $ip_address, $country);
         }
         $stmt->execute();
         $stmt->close();
@@ -197,5 +225,36 @@ else if($get_helper['helper_name']=="register_device") {
     }
     header('Content-Type: application/json; charset=utf-8');
     echo str_replace('\\/', '/', json_encode($set, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+    die();
+}
+
+// Log event — app sends error/event logs
+else if($get_helper['helper_name']=="log_event") {
+    $device_id = isset($get_helper['device_id']) ? cleanInput($get_helper['device_id']) : '';
+    $log_type  = isset($get_helper['log_type'])  ? cleanInput($get_helper['log_type'])  : 'info';
+    $message   = isset($get_helper['message'])   ? cleanInput($get_helper['message'])   : '';
+
+    if (!empty($device_id) && !empty($message)) {
+        $stmt = $mysqli->prepare("INSERT INTO tbl_user_logs (device_id, log_type, message) VALUES (?, ?, ?)");
+        $stmt->bind_param('sss', $device_id, $log_type, $message);
+        $stmt->execute();
+        $stmt->close();
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([$API_NAME => [['success' => '1']]]);
+    die();
+}
+
+// Heartbeat — called every 60s by the app while open, updates last_seen only
+else if($get_helper['helper_name']=="heartbeat") {
+    $device_id = isset($get_helper['device_id']) ? cleanInput($get_helper['device_id']) : '';
+    if (!empty($device_id)) {
+        $stmt = $mysqli->prepare("UPDATE tbl_users SET last_seen = NOW() WHERE device_id = ?");
+        $stmt->bind_param('s', $device_id);
+        $stmt->execute();
+        $stmt->close();
+    }
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([$API_NAME => [['success' => '1']]]);
     die();
 }

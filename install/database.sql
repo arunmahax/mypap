@@ -170,6 +170,20 @@ CREATE TABLE `tbl_xui_dns` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `tbl_user_logs`
+--
+
+CREATE TABLE `tbl_user_logs` (
+  `id` int(11) NOT NULL,
+  `device_id` varchar(255) NOT NULL,
+  `log_type` varchar(50) NOT NULL,
+  `message` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `tbl_users`
 --
 
@@ -184,6 +198,8 @@ CREATE TABLE `tbl_users` (
   `exp_date` varchar(100) NOT NULL,
   `app_version` varchar(50) NOT NULL,
   `device_type` varchar(50) NOT NULL DEFAULT '',
+  `ip_address` varchar(45) NOT NULL DEFAULT '',
+  `country` varchar(100) NOT NULL DEFAULT '',
   `first_seen` datetime DEFAULT NULL,
   `last_seen` datetime DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
