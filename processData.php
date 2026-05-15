@@ -1,12 +1,18 @@
-<?php 
+<?php
     require("includes/db_helper.php");
     require("includes/lb_helper.php");
     require("language/language.php");
 	require("language/api_language.php");
 	include("smtp_email.php");
-    
+
+    if (!isset($_SESSION['admin_name']) || !isset($_SESSION['admin_type'])) {
+        http_response_code(403);
+        echo json_encode(['status' => 0, 'msg' => 'Unauthorized']);
+        exit;
+    }
+
 	$response=array();
-	
+
 	$_SESSION['class'] = "success";
 
 	switch ($_POST['action']) {

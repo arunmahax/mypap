@@ -16,3 +16,17 @@ RewriteCond %{REQUEST_FILENAME} !-d
     Order allow,deny
     Deny from all
 </Files>
+
+# Security: block installer after setup
+<IfModule mod_rewrite.c>
+    RewriteRule ^install(/.*)?$ - [F,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>

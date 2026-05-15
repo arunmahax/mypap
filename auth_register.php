@@ -3,7 +3,13 @@
     include("includes/lb_helper.php");
     include("language/language.php");
     require_once("thumbnail_images.class.php");
-    
+
+    // Only an already-logged-in admin can create additional accounts
+    if (!isset($_SESSION['admin_name']) || !isset($_SESSION['admin_type'])) {
+        header("Location:index.php");
+        exit;
+    }
+
     if(isset($_POST['submit'])) {
         
         $ext = pathinfo($_FILES['banner_image']['name'], PATHINFO_EXTENSION);
@@ -37,7 +43,7 @@
             $data = array(
               'username'  => $_POST['register_name'],
               'email'  =>  $_POST['register_email'],
-              'password'  =>  md5(trim($_POST['register_password'])),
+              'password'  =>  password_hash(trim($_POST['register_password']), PASSWORD_BCRYPT),
               'image'  => $profile_img,
               'status'  => '0',
             );

@@ -65,7 +65,7 @@
        	} else if($_POST['register_confirm_password'] == $_POST['register_password']){
        	    
        	    $data = array(
-              'password'  =>  md5(trim($_POST['register_password']))
+              'password'  =>  password_hash(trim($_POST['register_password']), PASSWORD_BCRYPT)
             );
             
             $channel_edit=Update('tbl_admin', $data, "WHERE id = '".$_SESSION['id']."'");
