@@ -196,7 +196,7 @@ else if($get_helper['helper_name']=="register_device") {
                    last_seen           = NOW()
                  WHERE device_id = ?"
             );
-            $stmt->bind_param('sssssssssssssssssss',
+            $stmt->bind_param('ssssssssssssssssss',
                 $onesignal_player_id, $onesignal_player_id,
                 $server_url,          $server_url,
                 $username,            $username,
