@@ -22,7 +22,22 @@ function get_client_ip(): string {
     if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
         return trim($_SERVER['HTTP_CF_CONNECTING_IP']);
     }
-    // Fallback for non-Cloudflare / local dev
+    // Traefik/Coolify reverse proxy sets X-Forwarded-For with the real client IP
+    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        // May be a comma-separated list; first entry is the original client
+        $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+        $ip = trim($parts[0]);
+        if (filter_var($ip, FILTER_VALIDATE_IP)) {
+            return $ip;
+        }
+    }
+    // X-Real-IP (some proxy configs)
+    if (!empty($_SERVER['HTTP_X_REAL_IP'])) {
+        $ip = trim($_SERVER['HTTP_X_REAL_IP']);
+        if (filter_var($ip, FILTER_VALIDATE_IP)) {
+            return $ip;
+        }
+    }
     return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 }
 
@@ -54,8 +69,8 @@ if ($rl && $rl['last_attempt']
 }
 
 // ── Input validation ──────────────────────────────────────────────────────────
-$username = trim(filter_input(INPUT_POST, 'user_login',            FILTER_DEFAULT) ?? '');
-$password = trim(filter_input(INPUT_POST, 'nsofts_password_input', FILTER_DEFAULT) ?? '');
+$username = trim($_POST['user_login']            ?? '');
+$password = trim($_POST['nsofts_password_input'] ?? '');
 
 if ($username === '') {
     $_SESSION['class'] = "error";
