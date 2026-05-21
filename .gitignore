@@ -7,3 +7,12 @@ images/users/*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Private — never commit
+Android Code/
+veoplayer-website/
+.vscode/
+PHP Code/FIRST TIME BUYER CODE/
+PHP Code/UPDATE USER/streambox.zip
+PHP Code/UPDATE USER/streambox/
+PHP Code/UPDATE USER/sql.sql
