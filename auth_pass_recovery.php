@@ -18,12 +18,13 @@
     }
     
     if(isset($_POST['submit'])){
-        
-        $email=addslashes(trim($_POST['forgot_email']));
-        
-    	$qry = "SELECT * FROM tbl_admin WHERE email = '$email' AND `id` <> 0"; 
-    	$result = mysqli_query($mysqli,$qry);
-    	$row = mysqli_fetch_assoc($result);
+
+        $email = trim($_POST['forgot_email']);
+        $stmt  = $mysqli->prepare("SELECT id, username, email FROM tbl_admin WHERE email = ? LIMIT 1");
+        $stmt->bind_param('s', $email);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
 	
     	if($row['email']!=""){
     		$password=generateRandomPassword(7);
@@ -71,11 +72,11 @@
     
     		send_email($to,$recipient_name,$subject,$message);
     
-            $data = array(
-              'password'  =>  md5(trim($new_password))
-            );
-            
-            $update_edit=Update('tbl_admin', $data, "WHERE id = '".$row['id']."'");
+            $hashed = password_hash($new_password, PASSWORD_BCRYPT);
+            $upd    = $mysqli->prepare("UPDATE tbl_admin SET password = ? WHERE id = ?");
+            $upd->bind_param('si', $hashed, $row['id']);
+            $upd->execute();
+            $upd->close();
             
             $_SESSION['msg']="20";
             $_SESSION['class']='success'; 
@@ -99,9 +100,10 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-	<!-- Seo Meta -->
-    <meta name="description" content="Admin panel | Dashboard">
-    <meta name="keywords" content="css3, html5">
+	<!-- No indexing — admin panel must not appear in search engines -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
     
     <!-- Website Title -->
     <title>Login | <?php echo APP_NAME;?></title>

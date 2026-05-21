@@ -17,9 +17,10 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
-	<!-- Seo Meta -->
-    <meta name="description" content="Admin panel | Dashboard">
-    <meta name="keywords" content="css3, html5">
+	<!-- No indexing — admin panel must not appear in search engines -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="">
+    <meta name="keywords" content="">
     
     <!-- Website Title -->
     <title>Login | <?php echo APP_NAME;?></title>
