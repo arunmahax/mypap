@@ -20,6 +20,8 @@ if ($col_chk && $col_chk->fetch_row()[0] == 0) {
 $billing_cols = [
     'paywall_url_annual'   => "VARCHAR(500) NOT NULL DEFAULT ''",
     'paywall_url_lifetime' => "VARCHAR(500) NOT NULL DEFAULT ''",
+    'paywall_btn_annual'   => "VARCHAR(100) NOT NULL DEFAULT ''",
+    'paywall_btn_lifetime' => "VARCHAR(100) NOT NULL DEFAULT ''",
     'paywall_title'        => "VARCHAR(255) NOT NULL DEFAULT ''",
     'paywall_message'      => "TEXT",
     'trial_days'           => "TINYINT UNSIGNED NOT NULL DEFAULT 7",
@@ -92,6 +94,8 @@ if($get_helper['helper_name']=="app_details"){
         // Paywall & billing config
         $data_arr['paywall_url_annual']   = $data['paywall_url_annual']   ?? '';
         $data_arr['paywall_url_lifetime'] = $data['paywall_url_lifetime'] ?? '';
+        $data_arr['paywall_btn_annual']   = $data['paywall_btn_annual']   ?? '';
+        $data_arr['paywall_btn_lifetime'] = $data['paywall_btn_lifetime'] ?? '';
         $data_arr['paywall_title']        = $data['paywall_title']        ?? '';
         $data_arr['paywall_message']      = $data['paywall_message']      ?? '';
         $data_arr['trial_days']           = isset($data['trial_days']) && $data['trial_days'] > 0 ? (int)$data['trial_days'] : 7;

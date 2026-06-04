@@ -334,6 +334,16 @@
                                     <h5 class="mb-3">Annual Plan</h5>
 
                                     <div class="mb-3 row">
+                                        <label class="col-sm-3 col-form-label">Button Label</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" name="paywall_btn_annual"
+                                                value="<?php echo htmlspecialchars($settings_data['paywall_btn_annual'] ?? ''); ?>"
+                                                placeholder="e.g. Annual — $9.97/year">
+                                            <small class="text-muted">Leave empty to use the default text compiled in the app.</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3 row">
                                         <label class="col-sm-3 col-form-label">Checkout URL</label>
                                         <div class="col-sm-9">
                                             <input type="url" class="form-control" name="paywall_url_annual"
@@ -345,6 +355,16 @@
 
                                     <hr class="my-4">
                                     <h5 class="mb-3">Lifetime Plan</h5>
+
+                                    <div class="mb-3 row">
+                                        <label class="col-sm-3 col-form-label">Button Label</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" name="paywall_btn_lifetime"
+                                                value="<?php echo htmlspecialchars($settings_data['paywall_btn_lifetime'] ?? ''); ?>"
+                                                placeholder="e.g. Lifetime — $19.97 once">
+                                            <small class="text-muted">Leave empty to use the default text compiled in the app.</small>
+                                        </div>
+                                    </div>
 
                                     <div class="mb-3 row">
                                         <label class="col-sm-3 col-form-label">Checkout URL</label>
