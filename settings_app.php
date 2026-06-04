@@ -90,9 +90,7 @@
     } else if(isset($_POST['notification_submit'])) {
         
         $data = array(
-          'onesignal_app_id'   => trim($_POST['onesignal_app_id']),
-          'onesignal_rest_key' => trim($_POST['onesignal_rest_key']),
-          'fcm_server_key'     => fix_service_account_json($_POST['fcm_server_key']),
+          'fcm_server_key' => fix_service_account_json($_POST['fcm_server_key']),
         );
         
         $settings_edit = Update('tbl_settings', $data, "WHERE id = '1'");
@@ -434,18 +432,6 @@
                             <div class="tab-pane fade" id="nsofts_setting_content_6" role="tabpanel" aria-labelledby="nsofts_setting_6" tabindex="0">
                                 <form action="" name="settings_notification" method="POST" enctype="multipart/form-data">
                                     <h4 class="mb-4">Notification</h4>
-                                    <div class="mb-3 row">
-                                        <label for="" class="col-sm-2 col-form-label">OneSignal App ID</label>
-                                        <div class="col-sm-10">
-                                            <input type="text" name="onesignal_app_id" id="onesignal_app_id" value="<?php echo $settings_data['onesignal_app_id']; ?>"  class="form-control">
-                                        </div>
-                                    </div>
-                                    <div class="mb-3 row">
-                                        <label for="" class="col-sm-2 col-form-label">OneSignal Rest Key</label>
-                                        <div class="col-sm-10">
-                                            <input type="text" name="onesignal_rest_key" id="onesignal_rest_key" value="<?php echo $settings_data['onesignal_rest_key']; ?>"   class="form-control">
-                                        </div>
-                                    </div>
                                     <div class="mb-3 row">
                                         <label for="" class="col-sm-2 col-form-label">Firebase Service Account JSON <small class="text-muted">(Firebase → Project Settings → Service Accounts → Generate new private key)</small></label>
                                         <div class="col-sm-10">

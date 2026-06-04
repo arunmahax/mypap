@@ -25,8 +25,6 @@ if ($mysqli->connect_errno) {
     $settings_details=mysqli_fetch_assoc($setting_result);
     
     define("APP_API_KEY",'UzCbzsPZhsH8aeh1JlsK0gR0nYtmpgwcjtXm9g9lAUt4p');
-    define("ONESIGNAL_APP_ID",$settings_details['onesignal_app_id']);
-    define("ONESIGNAL_REST_KEY",$settings_details['onesignal_rest_key']);
     
     define("APP_NAME",$settings_details['app_name']);
     define("APP_LOGO",$settings_details['app_logo']);

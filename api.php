@@ -167,7 +167,8 @@ else if($get_helper['helper_name']=="get_interstitial") {
 else if($get_helper['helper_name']=="register_device") {
 
     $device_id           = isset($get_helper['device_id'])           ? cleanInput($get_helper['device_id'])           : '';
-    $onesignal_player_id = isset($get_helper['onesignal_player_id']) ? cleanInput($get_helper['onesignal_player_id']) : '';
+    $fcm_token = isset($get_helper['fcm_token']) ? cleanInput($get_helper['fcm_token'])
+               : (isset($get_helper['onesignal_player_id']) ? cleanInput($get_helper['onesignal_player_id']) : '');
     $server_url          = isset($get_helper['server_url'])          ? cleanInput($get_helper['server_url'])          : '';
     $username            = isset($get_helper['username'])            ? cleanInput($get_helper['username'])            : '';
     $password            = isset($get_helper['password'])            ? cleanInput($get_helper['password'])            : '';
@@ -222,7 +223,7 @@ else if($get_helper['helper_name']=="register_device") {
                  WHERE device_id = ?"
             );
             $stmt->bind_param('ssssssssssssssssss',
-                $onesignal_player_id, $onesignal_player_id,
+                $fcm_token, $fcm_token,
                 $server_url,          $server_url,
                 $username,            $username,
                 $password,            $password,
@@ -240,7 +241,7 @@ else if($get_helper['helper_name']=="register_device") {
                 "INSERT INTO tbl_users (device_id, onesignal_player_id, server_url, username, password, exp_date, app_version, device_type, ip_address, country, first_seen, last_seen)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())"
             );
-            $stmt->bind_param('ssssssssss', $device_id, $onesignal_player_id, $server_url, $username, $password, $exp_date, $app_version, $device_type, $ip_address, $country);
+            $stmt->bind_param('ssssssssss', $device_id, $fcm_token, $server_url, $username, $password, $exp_date, $app_version, $device_type, $ip_address, $country);
         }
         $stmt->execute();
         $stmt->close();
