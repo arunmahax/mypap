@@ -21,6 +21,21 @@
     $result_smtp = mysqli_query($mysqli, $qry_smtp);
     $row = mysqli_fetch_assoc($result_smtp);
     
+    if (isset($_POST['submit_paywall'])) {
+        $data = array(
+            'paywall_url_annual'   => trim($_POST['paywall_url_annual']   ?? ''),
+            'paywall_url_lifetime' => trim($_POST['paywall_url_lifetime'] ?? ''),
+            'paywall_title'        => trim($_POST['paywall_title']        ?? ''),
+            'paywall_message'      => trim($_POST['paywall_message']      ?? ''),
+            'trial_days'           => max(1, (int)($_POST['trial_days']   ?? 7)),
+        );
+        Update('tbl_settings', $data, "WHERE id = '1'");
+        $_SESSION['msg']   = "11";
+        $_SESSION['class'] = "success";
+        header("Location:settings.php");
+        exit;
+    }
+
     if(isset($_POST['submit_general'])){
         
         $img_res=mysqli_query($mysqli,"SELECT * FROM tbl_settings WHERE id='1'");
@@ -136,7 +151,12 @@
                                 <i class="ri-mail-send-line"></i>
                                 <span>Check Mail Confi</span>
                             </button>
-                                
+
+                            <button class="nav-link" id="nsofts_setting_4" data-bs-toggle="pill" data-bs-target="#nsofts_setting_content_4" type="button" role="tab" aria-controls="nsofts_setting_4" aria-selected="false">
+                                <i class="ri-money-dollar-circle-line"></i>
+                                <span>Paywall & Billing</span>
+                            </button>
+
                         </div>
                     </div>
                     <div class="nsofts-setting__content">
@@ -297,6 +317,71 @@
                                 </form>
                             </div>
                             
+                            <div class="tab-pane fade" id="nsofts_setting_content_4" role="tabpanel" aria-labelledby="nsofts_setting_4" tabindex="0">
+                                <form action="" method="POST">
+                                    <h4 class="mb-4">Paywall &amp; Billing</h4>
+
+                                    <div class="mb-3 row">
+                                        <label class="col-sm-3 col-form-label fw-semibold">Trial Duration (days)</label>
+                                        <div class="col-sm-3">
+                                            <input type="number" class="form-control" name="trial_days" min="1" max="365"
+                                                value="<?php echo (int)($settings_data['trial_days'] ?? 7); ?>" required>
+                                            <small class="text-muted">Default: 7 days. Changes apply on the user's next app launch.</small>
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-4">
+                                    <h5 class="mb-3">Annual Plan</h5>
+
+                                    <div class="mb-3 row">
+                                        <label class="col-sm-3 col-form-label">Checkout URL</label>
+                                        <div class="col-sm-9">
+                                            <input type="url" class="form-control" name="paywall_url_annual"
+                                                value="<?php echo htmlspecialchars($settings_data['paywall_url_annual'] ?? ''); ?>"
+                                                placeholder="https://your-store.lemonsqueezy.com/checkout/buy/...">
+                                            <small class="text-muted">Leave empty to use the default URL compiled in the app.</small>
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-4">
+                                    <h5 class="mb-3">Lifetime Plan</h5>
+
+                                    <div class="mb-3 row">
+                                        <label class="col-sm-3 col-form-label">Checkout URL</label>
+                                        <div class="col-sm-9">
+                                            <input type="url" class="form-control" name="paywall_url_lifetime"
+                                                value="<?php echo htmlspecialchars($settings_data['paywall_url_lifetime'] ?? ''); ?>"
+                                                placeholder="https://your-store.lemonsqueezy.com/checkout/buy/...">
+                                            <small class="text-muted">Leave empty to use the default URL compiled in the app.</small>
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-4">
+                                    <h5 class="mb-3">Paywall Text (shown to user when trial expires)</h5>
+
+                                    <div class="mb-3 row">
+                                        <label class="col-sm-3 col-form-label">Title</label>
+                                        <div class="col-sm-9">
+                                            <input type="text" class="form-control" name="paywall_title"
+                                                value="<?php echo htmlspecialchars($settings_data['paywall_title'] ?? ''); ?>"
+                                                placeholder="e.g. Your trial has ended">
+                                            <small class="text-muted">Leave empty to use the default app text.</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3 row">
+                                        <label class="col-sm-3 col-form-label">Message</label>
+                                        <div class="col-sm-9">
+                                            <textarea class="form-control" name="paywall_message" rows="3"
+                                                placeholder="e.g. Subscribe to keep watching unlimited IPTV content."><?php echo htmlspecialchars($settings_data['paywall_message'] ?? ''); ?></textarea>
+                                            <small class="text-muted">Leave empty to use the default app text.</small>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" name="submit_paywall" class="btn btn-primary" style="min-width: 120px;">Save</button>
+                                </form>
+                            </div>
+
                         </div>
                     </div>
                 </div>

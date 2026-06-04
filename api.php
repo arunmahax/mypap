@@ -11,10 +11,24 @@ $file_path = getBaseUrl();
 $mysqli->set_charset('utf8mb4');
 
 // Ensure device_id column exists in tbl_users.
-// NOTE: "ADD COLUMN IF NOT EXISTS" is MariaDB-only — MySQL 8 needs information_schema check.
 $col_chk = $mysqli->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbl_users' AND COLUMN_NAME = 'device_id'");
 if ($col_chk && $col_chk->fetch_row()[0] == 0) {
     $mysqli->query("ALTER TABLE tbl_users ADD COLUMN device_id VARCHAR(64) NOT NULL DEFAULT ''");
+}
+
+// Ensure paywall/billing config columns exist in tbl_settings.
+$billing_cols = [
+    'paywall_url_annual'   => "VARCHAR(500) NOT NULL DEFAULT ''",
+    'paywall_url_lifetime' => "VARCHAR(500) NOT NULL DEFAULT ''",
+    'paywall_title'        => "VARCHAR(255) NOT NULL DEFAULT ''",
+    'paywall_message'      => "TEXT",
+    'trial_days'           => "TINYINT UNSIGNED NOT NULL DEFAULT 7",
+];
+foreach ($billing_cols as $_col => $_def) {
+    $_chk = $mysqli->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'tbl_settings' AND COLUMN_NAME = '$_col'");
+    if ($_chk && $_chk->fetch_row()[0] == 0) {
+        $mysqli->query("ALTER TABLE tbl_settings ADD COLUMN $_col $_def");
+    }
 }
 
 date_default_timezone_set("Asia/Colombo");
@@ -74,6 +88,13 @@ if($get_helper['helper_name']=="app_details"){
         // Billing Plans
         $data_arr['plan_annual_enabled']   = $data['plan_annual_enabled']   ?? 'true';
         $data_arr['plan_lifetime_enabled'] = $data['plan_lifetime_enabled'] ?? 'true';
+
+        // Paywall & billing config
+        $data_arr['paywall_url_annual']   = $data['paywall_url_annual']   ?? '';
+        $data_arr['paywall_url_lifetime'] = $data['paywall_url_lifetime'] ?? '';
+        $data_arr['paywall_title']        = $data['paywall_title']        ?? '';
+        $data_arr['paywall_message']      = $data['paywall_message']      ?? '';
+        $data_arr['trial_days']           = isset($data['trial_days']) && $data['trial_days'] > 0 ? (int)$data['trial_days'] : 7;
         
         array_push($jsonObj,$data_arr);
     }
