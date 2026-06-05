@@ -46,9 +46,10 @@ if ($status !== 'paid') {
     exit('ok');
 }
 
-$device_id    = isset($data['meta']['custom_data']['device_id']) ? trim($data['meta']['custom_data']['device_id']) : '';
-$product_name = isset($order['first_order_item']['product_name'])  ? $order['first_order_item']['product_name'] : '';
-$order_id     = isset($data['data']['id']) ? $data['data']['id'] : '';
+$device_id      = isset($data['meta']['custom_data']['device_id']) ? trim($data['meta']['custom_data']['device_id']) : '';
+$customer_email = isset($order['user_email']) ? strtolower(trim($order['user_email'])) : '';
+$product_name   = isset($order['first_order_item']['product_name']) ? $order['first_order_item']['product_name'] : '';
+$order_id       = isset($data['data']['id']) ? $data['data']['id'] : '';
 
 if (empty($device_id)) {
     http_response_code(200);
@@ -58,30 +59,41 @@ if (empty($device_id)) {
 $plan       = (stripos($product_name, 'lifetime') !== false) ? 'lifetime' : 'annual';
 $expires_at = ($plan === 'lifetime') ? null : date('Y-m-d H:i:s', strtotime('+1 year'));
 
-// Create table if not exists
+// Create table if not exists (with customer_email column)
 mysqli_query($mysqli, "CREATE TABLE IF NOT EXISTS tbl_ls_licenses (
-    id         INT AUTO_INCREMENT PRIMARY KEY,
-    device_id  VARCHAR(255) NOT NULL,
-    order_id   VARCHAR(255) DEFAULT '',
-    plan       VARCHAR(20)  DEFAULT 'annual',
-    created_at TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
-    expires_at TIMESTAMP    NULL,
+    id             INT AUTO_INCREMENT PRIMARY KEY,
+    device_id      VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255) DEFAULT '',
+    order_id       VARCHAR(255) DEFAULT '',
+    plan           VARCHAR(20)  DEFAULT 'annual',
+    created_at     TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    expires_at     TIMESTAMP    NULL,
     UNIQUE KEY uq_device (device_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 
-$device_id_esc = mysqli_real_escape_string($mysqli, $device_id);
-$order_id_esc  = mysqli_real_escape_string($mysqli, $order_id);
-$plan_esc      = mysqli_real_escape_string($mysqli, $plan);
-$expires_sql   = ($expires_at !== null)
-    ? "'" . mysqli_real_escape_string($mysqli, $expires_at) . "'"
-    : "NULL";
+// Add customer_email column if missing (existing installs)
+$col = $mysqli->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='tbl_ls_licenses' AND COLUMN_NAME='customer_email'");
+if ($col && $col->fetch_row()[0] == 0) {
+    $mysqli->query("ALTER TABLE tbl_ls_licenses ADD COLUMN customer_email VARCHAR(255) DEFAULT '' AFTER device_id");
+}
 
-mysqli_query($mysqli, "INSERT INTO tbl_ls_licenses (device_id, order_id, plan, expires_at)
-    VALUES ('$device_id_esc', '$order_id_esc', '$plan_esc', $expires_sql)
-    ON DUPLICATE KEY UPDATE
-        order_id   = '$order_id_esc',
-        plan       = '$plan_esc',
-        expires_at = $expires_sql");
+$stmt = $mysqli->prepare(
+    "INSERT INTO tbl_ls_licenses (device_id, customer_email, order_id, plan, expires_at)
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+         customer_email = IF(? != '', ?, customer_email),
+         order_id       = ?,
+         plan           = ?,
+         expires_at     = ?"
+);
+$expires_val = $expires_at;
+$stmt->bind_param('sssssssssss',
+    $device_id, $customer_email, $order_id, $plan, $expires_at,
+    $customer_email, $customer_email,
+    $order_id, $plan, $expires_val
+);
+$stmt->execute();
+$stmt->close();
 
 http_response_code(200);
 echo 'ok';
